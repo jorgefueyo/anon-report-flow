@@ -120,6 +120,8 @@ const BackofficeEmpresa = () => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       
+      console.log('File selected:', file.name, file.type, file.size);
+      
       // Validar tipo de archivo
       if (!file.type.startsWith('image/')) {
         toast({
@@ -152,6 +154,9 @@ const BackofficeEmpresa = () => {
   };
 
   const onSubmit = async (data: EmpresaFormData) => {
+    console.log('Form submitted with data:', data);
+    console.log('Logo file to upload:', logoFile);
+    
     setSaving(true);
     try {
       const result = await updateEmpresa(data, logoFile || undefined);

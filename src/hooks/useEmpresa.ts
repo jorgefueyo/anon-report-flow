@@ -53,6 +53,8 @@ export const useEmpresa = () => {
       const fileExt = file.name.split('.').pop();
       const fileName = `${empresa?.id}/logo.${fileExt}`;
       
+      console.log('Uploading file:', fileName);
+      
       // Eliminar logo anterior si existe
       if (empresa?.logo_url) {
         const oldPath = empresa.logo_url.split('/').pop();
@@ -70,12 +72,16 @@ export const useEmpresa = () => {
           upsert: true
         });
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error('Upload error:', uploadError);
+        throw uploadError;
+      }
 
       const { data } = supabase.storage
         .from('empresa-logos')
         .getPublicUrl(fileName);
 
+      console.log('Logo uploaded successfully:', data.publicUrl);
       return data.publicUrl;
     } catch (error) {
       console.error('Error uploading logo:', error);
@@ -85,6 +91,9 @@ export const useEmpresa = () => {
 
   const updateEmpresa = async (updatedData: Partial<Empresa>, logoFile?: File) => {
     if (!empresa) return { success: false, error: 'No hay empresa cargada' };
+
+    console.log('Updating empresa with data:', updatedData);
+    console.log('Logo file:', logoFile);
 
     try {
       let logoUrl = empresa.logo_url;
@@ -105,6 +114,8 @@ export const useEmpresa = () => {
         configurada: true
       };
 
+      console.log('Data to update in database:', dataToUpdate);
+
       const { data, error } = await supabase
         .from('empresas')
         .update(dataToUpdate)
@@ -112,7 +123,12 @@ export const useEmpresa = () => {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Database update error:', error);
+        throw error;
+      }
+
+      console.log('Updated empresa data:', data);
 
       // Actualizar el estado local
       setEmpresa(data);
