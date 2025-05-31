@@ -192,6 +192,8 @@ const BackofficeGestionDenuncia = () => {
     try {
       setGuardando(true);
       console.log('Actualizando denuncia...');
+      console.log('Estado actual:', denuncia.estado);
+      console.log('Nuevo estado:', nuevoEstado);
 
       const estadoAnterior = denuncia.estado;
       const asignadoAnterior = denuncia.asignado_a;
@@ -199,14 +201,18 @@ const BackofficeGestionDenuncia = () => {
       const cambioEstado = estadoAnterior !== nuevoEstado;
       const cambioAsignacion = asignadoAnterior !== nuevoAsignadoId;
 
-      // Actualizar denuncia
+      // Actualizar denuncia con los nuevos valores
+      const updateData = {
+        estado: nuevoEstado,
+        asignado_a: nuevoAsignadoId,
+        observaciones_internas: observaciones.trim() || denuncia.observaciones_internas,
+      };
+
+      console.log('Datos de actualización:', updateData);
+
       const { error: updateError } = await supabase
         .from('denuncias')
-        .update({
-          estado: nuevoEstado,
-          asignado_a: nuevoAsignadoId,
-          observaciones_internas: observaciones.trim() || denuncia.observaciones_internas,
-        })
+        .update(updateData)
         .eq('id', denuncia.id);
 
       if (updateError) {
@@ -218,6 +224,8 @@ const BackofficeGestionDenuncia = () => {
         });
         return;
       }
+
+      console.log('Denuncia actualizada exitosamente');
 
       // Subir nuevos archivos si existen
       if (nuevosArchivos.length > 0) {
@@ -288,7 +296,7 @@ const BackofficeGestionDenuncia = () => {
         description: "Denuncia actualizada correctamente",
       });
 
-      // Recargar datos
+      // Recargar datos para reflejar los cambios
       await cargarDatos(denuncia.id);
       setAccionesRealizadas("");
       setObservaciones("");
