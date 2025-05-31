@@ -206,7 +206,7 @@ const BackofficeGestionDenuncia = () => {
 
       // Actualizar denuncia con los nuevos valores
       const updateData: any = {
-        estado: nuevoEstado,
+        estado: nuevoEstado,  // Esto se estaba perdiendo en la actualización anterior
         asignado_a: nuevoAsignadoId,
       };
 
@@ -217,6 +217,7 @@ const BackofficeGestionDenuncia = () => {
 
       console.log('Datos de actualización:', updateData);
 
+      // ACTUALIZAR LA DENUNCIA EN LA BASE DE DATOS
       const { error: updateError } = await supabase
         .from('denuncias')
         .update(updateData)
@@ -232,7 +233,7 @@ const BackofficeGestionDenuncia = () => {
         return;
       }
 
-      console.log('Denuncia actualizada exitosamente');
+      console.log('Denuncia actualizada exitosamente en la base de datos');
 
       // Subir nuevos archivos si existen
       if (nuevosArchivos.length > 0) {
