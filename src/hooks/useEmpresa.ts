@@ -36,7 +36,11 @@ export const useEmpresa = () => {
         }
 
         if (data) {
-          setEmpresa(data);
+          // Asegurar que logo_url esté incluido
+          setEmpresa({
+            ...data,
+            logo_url: data.logo_url || null
+          });
         }
       } catch (error) {
         console.error('Error loading empresa:', error);
@@ -130,8 +134,11 @@ export const useEmpresa = () => {
 
       console.log('Updated empresa data:', data);
 
-      // Actualizar el estado local
-      setEmpresa(data);
+      // Actualizar el estado local asegurando que logo_url esté incluido
+      setEmpresa({
+        ...data,
+        logo_url: data.logo_url || null
+      });
       return { success: true };
     } catch (error) {
       console.error('Error updating empresa:', error);

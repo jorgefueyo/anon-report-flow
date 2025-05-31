@@ -24,20 +24,12 @@ export const useConfiguracionCorreo = (empresaId?: string) => {
 
     const loadConfiguracion = async () => {
       try {
-        // Usar consulta SQL directa ya que la tabla no está en los tipos aún
-        const { data, error } = await supabase
-          .rpc('exec_sql', { 
-            sql: `SELECT * FROM configuracion_correo WHERE empresa_id = $1`,
-            params: [empresaId]
-          })
-          .catch(async () => {
-            // Fallback: usar supabase.from con any para evitar errores de tipo
-            return await (supabase as any)
-              .from('configuracion_correo')
-              .select('*')
-              .eq('empresa_id', empresaId)
-              .single();
-          });
+        // Usar supabase.from con any para evitar errores de tipo hasta que se actualicen los tipos
+        const { data, error } = await (supabase as any)
+          .from('configuracion_correo')
+          .select('*')
+          .eq('empresa_id', empresaId)
+          .single();
 
         if (error && error.code !== 'PGRST116') {
           console.error('Error loading configuracion correo:', error);
