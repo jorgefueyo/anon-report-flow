@@ -122,34 +122,46 @@ export type Database = {
       empresas: {
         Row: {
           cif: string
+          ciudad: string | null
+          codigo_postal: string | null
           configurada: boolean | null
           created_at: string
           direccion: string | null
           email: string | null
           id: string
           nombre: string
+          pais: string | null
+          provincia: string | null
           telefono: string | null
           updated_at: string
         }
         Insert: {
           cif: string
+          ciudad?: string | null
+          codigo_postal?: string | null
           configurada?: boolean | null
           created_at?: string
           direccion?: string | null
           email?: string | null
           id?: string
           nombre: string
+          pais?: string | null
+          provincia?: string | null
           telefono?: string | null
           updated_at?: string
         }
         Update: {
           cif?: string
+          ciudad?: string | null
+          codigo_postal?: string | null
           configurada?: boolean | null
           created_at?: string
           direccion?: string | null
           email?: string | null
           id?: string
           nombre?: string
+          pais?: string | null
+          provincia?: string | null
           telefono?: string | null
           updated_at?: string
         }

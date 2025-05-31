@@ -7,6 +7,10 @@ interface Empresa {
   nombre: string;
   cif: string;
   direccion: string | null;
+  codigo_postal: string | null;
+  ciudad: string | null;
+  provincia: string | null;
+  pais: string | null;
   email: string | null;
   telefono: string | null;
   configurada: boolean | null;
@@ -21,7 +25,7 @@ export const useEmpresa = () => {
       try {
         const { data } = await supabase
           .from('empresas')
-          .select('id, nombre, cif, direccion, email, telefono, configurada')
+          .select('id, nombre, cif, direccion, codigo_postal, ciudad, provincia, pais, email, telefono, configurada')
           .eq('cif', '12345678A')
           .single();
 

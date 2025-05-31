@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { 
   SidebarProvider,
   SidebarInset,
@@ -132,7 +131,7 @@ const BackofficeEmpresa = () => {
 
         if (createError) {
           console.error('Error creating empresa:', createError);
-        } else {
+        } else if (newEmpresa) {
           setEmpresa({
             id: newEmpresa.id,
             nombre: newEmpresa.nombre,
