@@ -6,10 +6,18 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, ArrowRight, FileText, User, Users, MapPin } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { supabase } from "@/hooks/useSupabase";
+import { useToast } from "@/hooks/use-toast";
+import { encryptData } from "@/utils/encryption";
 
 const NuevaDenuncia = () => {
   const [currentStep, setCurrentStep] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [codigoSeguimiento, setCodigoSeguimiento] = useState("");
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  
   const [formData, setFormData] = useState({
     // Datos del denunciante
     nombre: "",
@@ -76,10 +84,87 @@ const NuevaDenuncia = () => {
     }
   };
 
-  const handleSubmit = () => {
-    // Aquí implementaremos el envío a Supabase
-    console.log("Enviando denuncia:", formData);
-    alert("Denuncia enviada correctamente. Tu código de seguimiento es: DN-2024-001");
+  const handleSubmit = async () => {
+    if (!formData.email || !formData.hechos) {
+      toast({
+        title: "Error",
+        description: "El email y la descripción de hechos son obligatorios",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      // Get the default company (for demo purposes, in production you'd have proper company selection)
+      const { data: empresa, error: empresaError } = await supabase
+        .from('empresas')
+        .select('id')
+        .limit(1)
+        .single();
+
+      if (empresaError || !empresa) {
+        toast({
+          title: "Error",
+          description: "No se pudo encontrar la empresa",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Insert the complaint with proper encryption
+      const { data, error } = await supabase
+        .from('denuncias')
+        .insert({
+          empresa_id: empresa.id,
+          email_encriptado: encryptData(formData.email),
+          nombre_encriptado: formData.nombre ? encryptData(formData.nombre) : null,
+          telefono_encriptado: formData.telefono ? encryptData(formData.telefono) : null,
+          domicilio_encriptado: formData.domicilio ? encryptData(formData.domicilio) : null,
+          relacion_empresa: formData.relacionEmpresa,
+          categoria: formData.categoria,
+          hechos: formData.hechos,
+          fecha_hechos: formData.fecha || null,
+          lugar_hechos: formData.lugar,
+          testigos: formData.testigos,
+          personas_implicadas: formData.personasImplicadas,
+          estado: 'pendiente'
+        })
+        .select('codigo_seguimiento')
+        .single();
+
+      if (error) {
+        console.error('Error inserting complaint:', error);
+        toast({
+          title: "Error",
+          description: "Error al enviar la denuncia",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setCodigoSeguimiento(data.codigo_seguimiento);
+      toast({
+        title: "Denuncia enviada",
+        description: `Tu código de seguimiento es: ${data.codigo_seguimiento}`,
+      });
+
+      // Redirect to success page after 3 seconds
+      setTimeout(() => {
+        navigate('/');
+      }, 3000);
+
+    } catch (error) {
+      console.error('Unexpected error:', error);
+      toast({
+        title: "Error",
+        description: "Error inesperado al enviar la denuncia",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const getStepIcon = (step: number) => {
@@ -91,6 +176,31 @@ const NuevaDenuncia = () => {
       default: return <FileText className="w-5 h-5" />;
     }
   };
+
+  // If complaint was successfully submitted, show success message
+  if (codigoSeguimiento) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md text-center">
+          <CardHeader>
+            <CardTitle className="text-2xl text-green-600">¡Denuncia Enviada!</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="bg-green-50 p-4 rounded-lg">
+              <p className="font-semibold">Tu código de seguimiento es:</p>
+              <p className="text-xl font-mono text-green-700">{codigoSeguimiento}</p>
+            </div>
+            <p className="text-sm text-gray-600">
+              Guarda este código para consultar el estado de tu denuncia
+            </p>
+            <Button onClick={() => navigate('/')} className="w-full">
+              Volver al inicio
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100">
@@ -378,9 +488,10 @@ const NuevaDenuncia = () => {
               ) : (
                 <Button
                   onClick={handleSubmit}
+                  disabled={loading}
                   className="bg-green-600 hover:bg-green-700 text-white"
                 >
-                  Enviar Denuncia
+                  {loading ? "Enviando..." : "Enviar Denuncia"}
                 </Button>
               )}
             </div>
