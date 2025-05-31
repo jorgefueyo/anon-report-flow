@@ -78,29 +78,13 @@ export const useEmpresa = () => {
     loadEmpresa();
   }, []);
 
-  const uploadLogo = async (file: File): Promise<string | null> => {
+  const uploadLogo = async (file: File, empresaId: string): Promise<string | null> => {
     try {
-      if (!empresa?.id) {
-        console.error('No empresa ID available for logo upload');
-        return null;
-      }
-
       const fileExt = file.name.split('.').pop();
-      const fileName = `${empresa.id}/logo-${Date.now()}.${fileExt}`;
+      const fileName = `${empresaId}/logo-${Date.now()}.${fileExt}`;
       
       console.log('Uploading file:', fileName);
       
-      // Eliminar logo anterior si existe
-      if (empresa?.logo_url) {
-        const oldFileName = empresa.logo_url.split('/').pop();
-        if (oldFileName) {
-          console.log('Removing old logo:', oldFileName);
-          await supabase.storage
-            .from('empresa-logos')
-            .remove([`${empresa.id}/${oldFileName}`]);
-        }
-      }
-
       const { error: uploadError } = await supabase.storage
         .from('empresa-logos')
         .upload(fileName, file, {
@@ -126,21 +110,48 @@ export const useEmpresa = () => {
   };
 
   const updateEmpresa = async (updatedData: Partial<Empresa>, logoFile?: File) => {
-    if (!empresa) {
-      console.error('No empresa loaded for update');
-      return { success: false, error: 'No hay empresa cargada para actualizar' };
-    }
-
     console.log('Updating empresa with data:', updatedData);
     console.log('Logo file:', logoFile);
+    console.log('Current empresa:', empresa);
 
     try {
-      let logoUrl = empresa.logo_url;
+      let empresaToUpdate = empresa;
+      let logoUrl = empresa?.logo_url || null;
+
+      // Si no hay empresa cargada, crear una nueva
+      if (!empresaToUpdate) {
+        console.log('No empresa loaded, creating new one...');
+        const { data: newEmpresa, error: createError } = await supabase
+          .from('empresas')
+          .insert({
+            nombre: updatedData.nombre || 'Nueva Empresa',
+            cif: updatedData.cif || '',
+            direccion: updatedData.direccion || null,
+            codigo_postal: updatedData.codigo_postal || null,
+            ciudad: updatedData.ciudad || null,
+            provincia: updatedData.provincia || null,
+            pais: updatedData.pais || 'España',
+            email: updatedData.email || null,
+            telefono: updatedData.telefono || null,
+            configurada: true,
+            logo_url: null
+          })
+          .select()
+          .single();
+
+        if (createError) {
+          console.error('Error creating new empresa:', createError);
+          return { success: false, error: `Error al crear empresa: ${createError.message}` };
+        }
+
+        empresaToUpdate = newEmpresa as Empresa;
+        console.log('New empresa created:', empresaToUpdate);
+      }
 
       // Subir logo si se proporciona
-      if (logoFile) {
+      if (logoFile && empresaToUpdate) {
         console.log('Uploading logo file...');
-        const uploadedLogoUrl = await uploadLogo(logoFile);
+        const uploadedLogoUrl = await uploadLogo(logoFile, empresaToUpdate.id);
         if (uploadedLogoUrl) {
           logoUrl = uploadedLogoUrl;
           console.log('Logo uploaded, new URL:', logoUrl);
@@ -150,6 +161,7 @@ export const useEmpresa = () => {
         }
       }
 
+      // Actualizar los datos de la empresa
       const dataToUpdate = {
         ...updatedData,
         logo_url: logoUrl,
@@ -162,7 +174,7 @@ export const useEmpresa = () => {
       const { data, error } = await supabase
         .from('empresas')
         .update(dataToUpdate)
-        .eq('id', empresa.id)
+        .eq('id', empresaToUpdate.id)
         .select()
         .single();
 
