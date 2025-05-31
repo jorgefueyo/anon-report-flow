@@ -39,19 +39,24 @@ const SetupAdmin = () => {
     setLoading(true);
 
     try {
-      // Ejecutar función para garantizar que existe la empresa demo
-      const { data: empresaId, error: empresaError } = await supabase
-        .rpc('create_initial_admin');
+      // Obtener ID de empresa demo primero
+      const { data: empresa, error: empresaError } = await supabase
+        .from('empresas')
+        .select('id')
+        .eq('cif', '12345678A')
+        .single();
 
-      if (empresaError) {
-        console.error('Error creating empresa:', empresaError);
+      if (empresaError || !empresa) {
+        console.error('Error getting empresa:', empresaError);
         toast({
           title: "Error",
-          description: "No se pudo crear la empresa demo",
+          description: "No se encontró la empresa demo. Verifica que exista en la base de datos.",
           variant: "destructive",
         });
         return;
       }
+
+      console.log('Empresa encontrada:', empresa);
 
       // Crear usuario administrador en auth con email ya confirmado
       const { data: authData, error: authError } = await supabase.auth.admin.createUser({
@@ -83,24 +88,10 @@ const SetupAdmin = () => {
         return;
       }
 
-      // Obtener ID de empresa demo
-      const { data: empresa } = await supabase
-        .from('empresas')
-        .select('id')
-        .eq('cif', '12345678A')
-        .single();
-
-      if (!empresa) {
-        toast({
-          title: "Error",
-          description: "No se encontró la empresa demo",
-          variant: "destructive",
-        });
-        return;
-      }
+      console.log('Usuario auth creado:', authData.user);
 
       // Crear registro en usuarios_backoffice
-      const { error: userError } = await supabase
+      const { data: backofficeUser, error: userError } = await supabase
         .from('usuarios_backoffice')
         .insert({
           auth_user_id: authData.user.id,
@@ -109,7 +100,9 @@ const SetupAdmin = () => {
           nombre: 'Administrador Zerotek',
           rol: 'admin',
           activo: true
-        });
+        })
+        .select()
+        .single();
 
       if (userError) {
         console.error('Error al crear usuario backoffice:', userError);
@@ -120,6 +113,8 @@ const SetupAdmin = () => {
         });
         return;
       }
+
+      console.log('Usuario backoffice creado:', backofficeUser);
 
       toast({
         title: "Usuario administrador creado",
