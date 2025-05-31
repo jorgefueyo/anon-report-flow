@@ -8,6 +8,13 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { 
   SidebarProvider,
   SidebarInset
 } from "@/components/ui/sidebar";
@@ -18,14 +25,18 @@ import {
   Calendar,
   User,
   MapPin,
-  Users
+  Users,
+  Paperclip
 } from "lucide-react";
 import BackofficeSidebar from "@/components/BackofficeSidebar";
 import BackofficeHeader from "@/components/BackofficeHeader";
 import EstadoBadge from "@/components/EstadoBadge";
+import FileUpload from "@/components/FileUpload";
 import { supabase } from "@/integrations/supabase/client";
 import { decryptData } from "@/utils/encryption";
-import { Denuncia, SeguimientoDenuncia } from "@/types/denuncia";
+import { Denuncia, SeguimientoDenuncia, DenunciaArchivo } from "@/types/denuncia";
+import { useAdministradores } from "@/hooks/useAdministradores";
+import { useDenuncias } from "@/hooks/useDenuncias";
 
 interface Admin {
   id: string;
@@ -33,18 +44,31 @@ interface Admin {
   nombre: string;
 }
 
+interface Administrador {
+  id: string;
+  email: string;
+  nombre: string;
+  activo: boolean;
+}
+
 const BackofficeGestionDenuncia = () => {
   const { id } = useParams<{ id: string }>();
   const [admin, setAdmin] = useState<Admin | null>(null);
   const [denuncia, setDenuncia] = useState<Denuncia | null>(null);
   const [seguimientos, setSeguimientos] = useState<SeguimientoDenuncia[]>([]);
+  const [administradores, setAdministradores] = useState<Administrador[]>([]);
+  const [archivos, setArchivos] = useState<DenunciaArchivo[]>([]);
+  const [nuevosArchivos, setNuevosArchivos] = useState<File[]>([]);
   const [loading, setLoading] = useState(true);
   const [guardando, setGuardando] = useState(false);
   const [nuevoEstado, setNuevoEstado] = useState<'pendiente' | 'en_proceso' | 'finalizada'>('pendiente');
+  const [administradorAsignado, setAdministradorAsignado] = useState<string>("");
   const [observaciones, setObservaciones] = useState("");
   const [accionesRealizadas, setAccionesRealizadas] = useState("");
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { obtenerAdministradores } = useAdministradores();
+  const { obtenerArchivosDenuncia } = useDenuncias();
 
   useEffect(() => {
     // Verificar si hay admin logueado
@@ -58,7 +82,7 @@ const BackofficeGestionDenuncia = () => {
       const parsedAdmin = JSON.parse(adminData);
       setAdmin(parsedAdmin);
       if (id) {
-        cargarDenuncia(id);
+        cargarDatos(id);
       }
     } catch (error) {
       console.error('Error parsing admin data:', error);
@@ -66,10 +90,10 @@ const BackofficeGestionDenuncia = () => {
     }
   }, [navigate, id]);
 
-  const cargarDenuncia = async (denunciaId: string) => {
+  const cargarDatos = async (denunciaId: string) => {
     try {
       setLoading(true);
-      console.log('Cargando denuncia:', denunciaId);
+      console.log('Cargando datos para denuncia:', denunciaId);
 
       // Cargar denuncia
       const { data: denunciaData, error: denunciaError } = await supabase
@@ -91,6 +115,7 @@ const BackofficeGestionDenuncia = () => {
 
       setDenuncia(denunciaData);
       setNuevoEstado(denunciaData.estado);
+      setAdministradorAsignado(denunciaData.asignado_a || "");
 
       // Cargar seguimientos
       const { data: seguimientosData, error: seguimientosError } = await supabase
@@ -105,15 +130,61 @@ const BackofficeGestionDenuncia = () => {
         setSeguimientos(seguimientosData || []);
       }
 
+      // Cargar administradores
+      const adminsList = await obtenerAdministradores();
+      setAdministradores(adminsList);
+
+      // Cargar archivos existentes
+      const archivosExistentes = await obtenerArchivosDenuncia(denunciaId);
+      setArchivos(archivosExistentes);
+
     } catch (error) {
       console.error('Error:', error);
       toast({
         title: "Error",
-        description: "Error inesperado al cargar la denuncia",
+        description: "Error inesperado al cargar los datos",
         variant: "destructive",
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const subirNuevosArchivos = async (denunciaId: string, archivos: File[]) => {
+    for (const archivo of archivos) {
+      try {
+        // Generar nombre único para el archivo
+        const timestamp = Date.now();
+        const nombreArchivo = `${timestamp}-${archivo.name}`;
+        const rutaArchivo = `${denunciaId}/${nombreArchivo}`;
+
+        // Subir archivo a Supabase Storage
+        const { error: uploadError } = await supabase.storage
+          .from('denuncia-attachments')
+          .upload(rutaArchivo, archivo);
+
+        if (uploadError) {
+          console.error('Error subiendo archivo:', uploadError);
+          continue;
+        }
+
+        // Guardar metadata del archivo en la base de datos
+        const { error: metadataError } = await supabase
+          .from('denuncia_archivos')
+          .insert({
+            denuncia_id: denunciaId,
+            nombre_archivo: archivo.name,
+            ruta_archivo: rutaArchivo,
+            tipo_archivo: archivo.type,
+            tamano_archivo: archivo.size,
+          });
+
+        if (metadataError) {
+          console.error('Error guardando metadata del archivo:', metadataError);
+        }
+      } catch (error) {
+        console.error('Error procesando archivo:', archivo.name, error);
+      }
     }
   };
 
@@ -125,15 +196,17 @@ const BackofficeGestionDenuncia = () => {
       console.log('Actualizando denuncia...');
 
       const estadoAnterior = denuncia.estado;
+      const asignadoAnterior = denuncia.asignado_a;
       const cambioEstado = estadoAnterior !== nuevoEstado;
+      const cambioAsignacion = asignadoAnterior !== administradorAsignado;
 
       // Actualizar denuncia
       const { error: updateError } = await supabase
         .from('denuncias')
         .update({
           estado: nuevoEstado,
-          asignado_a: admin.id,
-          observaciones_internas: observaciones || denuncia.observaciones_internas,
+          asignado_a: administradorAsignado || null,
+          observaciones_internas: observaciones.trim() || denuncia.observaciones_internas,
         })
         .eq('id', denuncia.id);
 
@@ -147,8 +220,23 @@ const BackofficeGestionDenuncia = () => {
         return;
       }
 
+      // Subir nuevos archivos si existen
+      if (nuevosArchivos.length > 0) {
+        await subirNuevosArchivos(denuncia.id, nuevosArchivos);
+        setNuevosArchivos([]);
+      }
+
       // Crear registro de seguimiento si hay cambios
-      if (cambioEstado || accionesRealizadas.trim()) {
+      if (cambioEstado || cambioAsignacion || accionesRealizadas.trim()) {
+        let operacion = 'Actualización';
+        if (cambioEstado && cambioAsignacion) {
+          operacion = 'Cambio de estado y asignación';
+        } else if (cambioEstado) {
+          operacion = 'Cambio de estado';
+        } else if (cambioAsignacion) {
+          operacion = 'Cambio de asignación';
+        }
+
         const { error: seguimientoError } = await supabase
           .from('seguimiento_denuncias')
           .insert({
@@ -156,7 +244,7 @@ const BackofficeGestionDenuncia = () => {
             usuario_id: admin.id,
             estado_anterior: estadoAnterior,
             estado_nuevo: nuevoEstado,
-            operacion: cambioEstado ? 'Cambio de estado' : 'Actualización',
+            operacion: operacion,
             acciones_realizadas: accionesRealizadas.trim() || null,
             observaciones: observaciones.trim() || null,
           });
@@ -172,7 +260,7 @@ const BackofficeGestionDenuncia = () => {
       });
 
       // Recargar datos
-      await cargarDenuncia(denuncia.id);
+      await cargarDatos(denuncia.id);
       setAccionesRealizadas("");
       setObservaciones("");
 
@@ -195,6 +283,11 @@ const BackofficeGestionDenuncia = () => {
     } catch {
       return "Dato no disponible";
     }
+  };
+
+  const getNombreAdministrador = (adminId: string) => {
+    const admin = administradores.find(a => a.id === adminId);
+    return admin ? admin.nombre : 'Sin asignar';
   };
 
   if (!admin) {
@@ -312,6 +405,13 @@ const BackofficeGestionDenuncia = () => {
                         {new Date(denuncia.created_at).toLocaleString('es-ES')}
                       </p>
                     </div>
+
+                    <div>
+                      <Label className="font-semibold">Asignado a:</Label>
+                      <p className="text-sm text-gray-600">
+                        {denuncia.asignado_a ? getNombreAdministrador(denuncia.asignado_a) : 'Sin asignar'}
+                      </p>
+                    </div>
                   </CardContent>
                 </Card>
 
@@ -367,24 +467,72 @@ const BackofficeGestionDenuncia = () => {
                 </CardContent>
               </Card>
 
+              {/* Archivos existentes */}
+              {archivos.length > 0 && (
+                <Card className="mb-6">
+                  <CardHeader>
+                    <CardTitle className="flex items-center">
+                      <Paperclip className="w-5 h-5 mr-2" />
+                      Archivos Adjuntos ({archivos.length})
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {archivos.map((archivo) => (
+                        <div key={archivo.id} className="border rounded-lg p-3">
+                          <div className="flex items-center space-x-2">
+                            <FileText className="w-4 h-4 text-gray-500" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium truncate">{archivo.nombre_archivo}</p>
+                              <p className="text-xs text-gray-500">
+                                {archivo.tamano_archivo ? `${(archivo.tamano_archivo / 1024).toFixed(1)} KB` : 'Tamaño desconocido'}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
               {/* Gestión de la denuncia */}
               <Card className="mb-6">
                 <CardHeader>
                   <CardTitle>Gestión de la Denuncia</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div>
-                    <Label htmlFor="estado">Estado de la denuncia</Label>
-                    <select
-                      id="estado"
-                      value={nuevoEstado}
-                      onChange={(e) => setNuevoEstado(e.target.value as 'pendiente' | 'en_proceso' | 'finalizada')}
-                      className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="pendiente">Pendiente</option>
-                      <option value="en_proceso">En Proceso</option>
-                      <option value="finalizada">Finalizada</option>
-                    </select>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="estado">Estado de la denuncia</Label>
+                      <Select value={nuevoEstado} onValueChange={(value) => setNuevoEstado(value as 'pendiente' | 'en_proceso' | 'finalizada')}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Seleccionar estado" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="pendiente">Pendiente</SelectItem>
+                          <SelectItem value="en_proceso">En Proceso</SelectItem>
+                          <SelectItem value="finalizada">Finalizada</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="asignado">Asignado a</Label>
+                      <Select value={administradorAsignado} onValueChange={setAdministradorAsignado}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Seleccionar administrador" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">Sin asignar</SelectItem>
+                          {administradores.map((admin) => (
+                            <SelectItem key={admin.id} value={admin.id}>
+                              {admin.nombre} ({admin.email})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
 
                   <div>
@@ -408,6 +556,15 @@ const BackofficeGestionDenuncia = () => {
                       placeholder="Notas internas sobre el caso..."
                       rows={3}
                       className="mt-1"
+                    />
+                  </div>
+
+                  <div>
+                    <Label>Adjuntar nuevos archivos</Label>
+                    <FileUpload 
+                      files={nuevosArchivos}
+                      onFilesChange={setNuevosArchivos}
+                      maxFiles={5}
                     />
                   </div>
 

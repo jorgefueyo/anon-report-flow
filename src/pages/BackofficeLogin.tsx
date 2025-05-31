@@ -46,8 +46,11 @@ const BackofficeLogin = () => {
               console.log('Sesión inválida, limpiando...');
               localStorage.removeItem('backoffice_admin');
             }
+            setCheckingSession(false);
           })
-          .finally(() => {
+          .catch((error) => {
+            console.error('Error verificando sesión:', error);
+            localStorage.removeItem('backoffice_admin');
             setCheckingSession(false);
           });
       } catch (error) {
