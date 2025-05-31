@@ -1,18 +1,12 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { 
   SidebarProvider,
   SidebarInset
@@ -21,22 +15,17 @@ import {
   ArrowLeft,
   Save,
   FileText,
-  Calendar,
   User,
-  MapPin,
-  Users,
-  Paperclip
+  Calendar,
+  MapPin
 } from "lucide-react";
 import BackofficeSidebar from "@/components/BackofficeSidebar";
 import BackofficeHeader from "@/components/BackofficeHeader";
 import EstadoBadge from "@/components/EstadoBadge";
-import FileUpload from "@/components/FileUpload";
+import HistorialSeguimiento from "@/components/HistorialSeguimiento";
 import { supabase } from "@/integrations/supabase/client";
-import { Denuncia, SeguimientoDenuncia, DenunciaArchivo } from "@/types/denuncia";
-import { useAdministradores } from "@/hooks/useAdministradores";
-import { useDenuncias } from "@/hooks/useDenuncias";
-import { useEmailNotifications } from "@/hooks/useEmailNotifications";
 import { decryptData } from "@/utils/encryption";
+import { Denuncia } from "@/types/denuncia";
 
 interface Admin {
   id: string;
@@ -44,35 +33,21 @@ interface Admin {
   nombre: string;
 }
 
-interface Administrador {
-  id: string;
-  email: string;
-  nombre: string;
-  activo: boolean;
-}
+type EstadoDenuncia = 'pendiente' | 'en_proceso' | 'finalizada';
 
 const BackofficeGestionDenuncia = () => {
-  const { id } = useParams<{ id: string }>();
   const [admin, setAdmin] = useState<Admin | null>(null);
   const [denuncia, setDenuncia] = useState<Denuncia | null>(null);
-  const [seguimientos, setSeguimientos] = useState<SeguimientoDenuncia[]>([]);
-  const [administradores, setAdministradores] = useState<Administrador[]>([]);
-  const [archivos, setArchivos] = useState<DenunciaArchivo[]>([]);
-  const [nuevosArchivos, setNuevosArchivos] = useState<File[]>([]);
   const [loading, setLoading] = useState(true);
   const [guardando, setGuardando] = useState(false);
-  const [nuevoEstado, setNuevoEstado] = useState<'pendiente' | 'en_proceso' | 'finalizada'>('pendiente');
-  const [administradorAsignado, setAdministradorAsignado] = useState<string>("unassigned");
+  const [nuevoEstado, setNuevoEstado] = useState<EstadoDenuncia>('pendiente');
   const [observaciones, setObservaciones] = useState("");
-  const [accionesRealizadas, setAccionesRealizadas] = useState("");
+  const [observacionesInternas, setObservacionesInternas] = useState("");
   const navigate = useNavigate();
+  const { id } = useParams();
   const { toast } = useToast();
-  const { obtenerAdministradores } = useAdministradores();
-  const { obtenerArchivosDenuncia } = useDenuncias();
-  const { sendEstadoCambioNotification } = useEmailNotifications();
 
   useEffect(() => {
-    // Verificar si hay admin logueado
     const adminData = localStorage.getItem('backoffice_admin');
     if (!adminData) {
       navigate('/backoffice/login');
@@ -83,7 +58,7 @@ const BackofficeGestionDenuncia = () => {
       const parsedAdmin = JSON.parse(adminData);
       setAdmin(parsedAdmin);
       if (id) {
-        cargarDatos(id);
+        cargarDenuncia(id);
       }
     } catch (error) {
       console.error('Error parsing admin data:', error);
@@ -91,20 +66,19 @@ const BackofficeGestionDenuncia = () => {
     }
   }, [navigate, id]);
 
-  const cargarDatos = async (denunciaId: string) => {
+  const cargarDenuncia = async (denunciaId: string) => {
     try {
       setLoading(true);
-      console.log('Cargando datos para denuncia:', denunciaId);
+      console.log('Cargando denuncia:', denunciaId);
 
-      // Cargar denuncia
-      const { data: denunciaData, error: denunciaError } = await supabase
+      const { data, error } = await supabase
         .from('denuncias')
         .select('*')
         .eq('id', denunciaId)
         .single();
 
-      if (denunciaError) {
-        console.error('Error cargando denuncia:', denunciaError);
+      if (error) {
+        console.error('Error cargando denuncia:', error);
         toast({
           title: "Error",
           description: "No se pudo cargar la denuncia",
@@ -114,78 +88,19 @@ const BackofficeGestionDenuncia = () => {
         return;
       }
 
-      setDenuncia(denunciaData);
-      setNuevoEstado(denunciaData.estado);
-      setAdministradorAsignado(denunciaData.asignado_a || "unassigned");
-
-      // Cargar seguimientos
-      const { data: seguimientosData, error: seguimientosError } = await supabase
-        .from('seguimiento_denuncias')
-        .select('*')
-        .eq('denuncia_id', denunciaId)
-        .order('created_at', { ascending: false });
-
-      if (seguimientosError) {
-        console.error('Error cargando seguimientos:', seguimientosError);
-      } else {
-        setSeguimientos(seguimientosData || []);
-      }
-
-      // Cargar administradores
-      const adminsList = await obtenerAdministradores();
-      setAdministradores(adminsList);
-
-      // Cargar archivos existentes
-      const archivosExistentes = await obtenerArchivosDenuncia(denunciaId);
-      setArchivos(archivosExistentes);
-
+      console.log('Denuncia cargada:', data);
+      setDenuncia(data);
+      setNuevoEstado(data.estado as EstadoDenuncia);
+      setObservacionesInternas(data.observaciones_internas || "");
     } catch (error) {
       console.error('Error:', error);
       toast({
         title: "Error",
-        description: "Error inesperado al cargar los datos",
+        description: "Error inesperado al cargar la denuncia",
         variant: "destructive",
       });
     } finally {
       setLoading(false);
-    }
-  };
-
-  const subirNuevosArchivos = async (denunciaId: string, archivos: File[]) => {
-    for (const archivo of archivos) {
-      try {
-        // Generar nombre único para el archivo
-        const timestamp = Date.now();
-        const nombreArchivo = `${timestamp}-${archivo.name}`;
-        const rutaArchivo = `${denunciaId}/${nombreArchivo}`;
-
-        // Subir archivo a Supabase Storage
-        const { error: uploadError } = await supabase.storage
-          .from('denuncia-attachments')
-          .upload(rutaArchivo, archivo);
-
-        if (uploadError) {
-          console.error('Error subiendo archivo:', uploadError);
-          continue;
-        }
-
-        // Guardar metadata del archivo en la base de datos
-        const { error: metadataError } = await supabase
-          .from('denuncia_archivos')
-          .insert({
-            denuncia_id: denunciaId,
-            nombre_archivo: archivo.name,
-            ruta_archivo: rutaArchivo,
-            tipo_archivo: archivo.type,
-            tamano_archivo: archivo.size,
-          });
-
-        if (metadataError) {
-          console.error('Error guardando metadata del archivo:', metadataError);
-        }
-      } catch (error) {
-        console.error('Error procesando archivo:', archivo.name, error);
-      }
     }
   };
 
@@ -194,174 +109,61 @@ const BackofficeGestionDenuncia = () => {
 
     try {
       setGuardando(true);
-      console.log('Iniciando actualización de denuncia...');
-      console.log('ID de la denuncia:', denuncia.id);
-      console.log('Estado actual:', denuncia.estado);
-      console.log('Nuevo estado:', nuevoEstado);
-      console.log('Administrador actual:', denuncia.asignado_a);
-      console.log('Nuevo administrador:', administradorAsignado);
+      console.log('Actualizando denuncia:', {
+        id: denuncia.id,
+        estado_anterior: denuncia.estado,
+        estado_nuevo: nuevoEstado,
+        observaciones_internas: observacionesInternas
+      });
 
-      const estadoAnterior = denuncia.estado;
-      const asignadoAnterior = denuncia.asignado_a;
-      const nuevoAsignadoId = administradorAsignado === "unassigned" ? null : administradorAsignado;
-      const cambioEstado = estadoAnterior !== nuevoEstado;
-      const cambioAsignacion = asignadoAnterior !== nuevoAsignadoId;
-
-      // Preparar datos de actualización
-      const updateData: any = {
-        estado: nuevoEstado,
-        asignado_a: nuevoAsignadoId,
-      };
-
-      // Solo agregar observaciones_internas si hay contenido
-      if (observaciones.trim()) {
-        updateData.observaciones_internas = observaciones.trim();
-      }
-
-      console.log('Datos para actualizar:', updateData);
-
-      // ACTUALIZAR LA DENUNCIA EN LA BASE DE DATOS
-      const { data: updatedDenuncia, error: updateError } = await supabase
+      const { error: updateError } = await supabase
         .from('denuncias')
-        .update(updateData)
-        .eq('id', denuncia.id)
-        .select()
-        .single();
+        .update({
+          estado: nuevoEstado,
+          asignado_a: admin.id,
+          observaciones_internas: observacionesInternas,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', denuncia.id);
 
       if (updateError) {
         console.error('Error actualizando denuncia:', updateError);
-        toast({
-          title: "Error",
-          description: `No se pudo actualizar la denuncia: ${updateError.message}`,
-          variant: "destructive",
-        });
-        return;
+        throw updateError;
       }
 
-      if (!updatedDenuncia) {
-        console.error('No se recibieron datos de la denuncia actualizada');
-        toast({
-          title: "Error",
-          description: "No se pudo confirmar la actualización de la denuncia",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      console.log('Denuncia actualizada exitosamente:', updatedDenuncia);
-
-      // Actualizar el estado local inmediatamente
-      setDenuncia(updatedDenuncia);
-
-      // Subir nuevos archivos si existen
-      if (nuevosArchivos.length > 0) {
-        console.log('Subiendo nuevos archivos...');
-        await subirNuevosArchivos(denuncia.id, nuevosArchivos);
-        setNuevosArchivos([]);
-      }
-
-      // Crear registro de seguimiento si hay cambios
-      if (cambioEstado || cambioAsignacion || accionesRealizadas.trim()) {
-        let operacion = 'Actualización';
-        if (cambioEstado && cambioAsignacion) {
-          operacion = 'Cambio de estado y asignación';
-        } else if (cambioEstado) {
-          operacion = 'Cambio de estado';
-        } else if (cambioAsignacion) {
-          operacion = 'Cambio de asignación';
-        }
-
-        // Buscar el ID del administrador en la tabla administradores
-        const { data: adminFromDB, error: adminError } = await supabase
-          .from('administradores')
-          .select('id')
-          .eq('email', admin.email)
-          .single();
-
-        if (adminError) {
-          console.error('Error buscando administrador:', adminError);
-        }
-
-        const usuarioId = adminFromDB?.id || null;
-
-        console.log('Creando seguimiento con datos:', {
-          denuncia_id: denuncia.id,
-          usuario_id: usuarioId,
-          estado_anterior: estadoAnterior,
-          estado_nuevo: nuevoEstado,
-          operacion: operacion,
-          acciones_realizadas: accionesRealizadas.trim() || null,
-          observaciones: observaciones.trim() || null,
-        });
-
+      // Solo crear seguimiento si el estado cambió
+      if (denuncia.estado !== nuevoEstado) {
         const { error: seguimientoError } = await supabase
           .from('seguimiento_denuncias')
           .insert({
             denuncia_id: denuncia.id,
-            usuario_id: usuarioId,
-            estado_anterior: estadoAnterior,
+            usuario_id: admin.id,
+            estado_anterior: denuncia.estado,
             estado_nuevo: nuevoEstado,
-            operacion: operacion,
-            acciones_realizadas: accionesRealizadas.trim() || null,
-            observaciones: observaciones.trim() || null,
+            operacion: 'Cambio de estado',
+            acciones_realizadas: observaciones || `Estado cambiado de ${denuncia.estado} a ${nuevoEstado}`,
+            observaciones: observaciones || null
           });
 
         if (seguimientoError) {
           console.error('Error creando seguimiento:', seguimientoError);
-          toast({
-            title: "Advertencia",
-            description: "La denuncia se actualizó pero no se pudo guardar el seguimiento",
-            variant: "destructive",
-          });
-        } else {
-          console.log('Seguimiento creado exitosamente');
-        }
-      }
-
-      // Enviar notificación por email si cambió el estado
-      if (cambioEstado) {
-        try {
-          console.log('Enviando notificación por email...');
-          // Desencriptar el email del denunciante
-          const emailDenunciante = decryptData(denuncia.email_encriptado);
-          
-          // Obtener nombre de la empresa
-          const { data: empresaData } = await supabase
-            .from('empresas')
-            .select('nombre')
-            .eq('id', denuncia.empresa_id)
-            .single();
-
-          await sendEstadoCambioNotification(
-            emailDenunciante,
-            denuncia.codigo_seguimiento,
-            estadoAnterior,
-            nuevoEstado,
-            empresaData?.nombre
-          );
-
-          console.log('Notificación de cambio de estado enviada');
-        } catch (emailError) {
-          console.error('Error enviando notificación por email:', emailError);
-          // No mostramos error al usuario ya que la actualización fue exitosa
         }
       }
 
       toast({
-        title: "Éxito",
-        description: "Denuncia actualizada correctamente",
+        title: "Denuncia actualizada",
+        description: "Los cambios se han guardado correctamente",
       });
 
-      // Recargar datos para reflejar los cambios
-      await cargarDatos(denuncia.id);
-      setAccionesRealizadas("");
+      // Recargar la denuncia para mostrar los cambios
+      await cargarDenuncia(denuncia.id);
       setObservaciones("");
 
     } catch (error) {
-      console.error('Error completo:', error);
+      console.error('Error actualizando denuncia:', error);
       toast({
         title: "Error",
-        description: `Error inesperado al actualizar: ${error instanceof Error ? error.message : 'Error desconocido'}`,
+        description: "No se pudo actualizar la denuncia",
         variant: "destructive",
       });
     } finally {
@@ -369,9 +171,13 @@ const BackofficeGestionDenuncia = () => {
     }
   };
 
-  const getNombreAdministrador = (adminId: string) => {
-    const admin = administradores.find(a => a.id === adminId);
-    return admin ? admin.nombre : 'Sin asignar';
+  const getDecryptedValue = (encryptedValue: string | null) => {
+    if (!encryptedValue) return "No disponible";
+    try {
+      return decryptData(encryptedValue);
+    } catch {
+      return "Error al desencriptar";
+    }
   };
 
   if (!admin) {
@@ -389,7 +195,7 @@ const BackofficeGestionDenuncia = () => {
           <BackofficeSidebar admin={admin} activeItem="denuncias" />
           <SidebarInset>
             <BackofficeHeader admin={admin} />
-            <div className="flex-1 flex items-center justify-center">
+            <div className="flex-1 p-6 flex items-center justify-center">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
             </div>
           </SidebarInset>
@@ -405,11 +211,14 @@ const BackofficeGestionDenuncia = () => {
           <BackofficeSidebar admin={admin} activeItem="denuncias" />
           <SidebarInset>
             <BackofficeHeader admin={admin} />
-            <div className="flex-1 flex items-center justify-center">
+            <div className="flex-1 p-6">
               <div className="text-center">
-                <h2 className="text-xl font-bold mb-4">Denuncia no encontrada</h2>
+                <h1 className="text-2xl font-bold text-gray-900 mb-4">
+                  Denuncia no encontrada
+                </h1>
                 <Button onClick={() => navigate('/backoffice/denuncias')}>
-                  Volver a denuncias
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Volver a Denuncias
                 </Button>
               </div>
             </div>
@@ -428,284 +237,201 @@ const BackofficeGestionDenuncia = () => {
           <BackofficeHeader admin={admin} />
 
           <div className="flex-1 p-6">
-            <div className="max-w-7xl mx-auto">
-              <div className="flex items-center gap-4 mb-6">
+            <div className="max-w-6xl mx-auto">
+              <div className="flex justify-between items-center mb-6">
+                <div>
+                  <h1 className="text-3xl font-bold text-gray-900">
+                    Gestión de Denuncia
+                  </h1>
+                  <p className="text-gray-600 mt-1">
+                    Código: {denuncia.codigo_seguimiento}
+                  </p>
+                </div>
                 <Button 
                   variant="outline" 
                   onClick={() => navigate('/backoffice/denuncias')}
                 >
                   <ArrowLeft className="w-4 h-4 mr-2" />
-                  Volver
+                  Volver a Denuncias
                 </Button>
-                <h1 className="text-3xl font-bold text-gray-900">
-                  Gestión de Denuncia: {denuncia.codigo_seguimiento}
-                </h1>
-                <EstadoBadge estado={denuncia.estado} />
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                {/* Información de la denuncia - SIN DATOS SENSIBLES */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center">
-                      <FileText className="w-5 h-5 mr-2" />
-                      Información de la Denuncia
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div>
-                      <Label className="font-semibold">Código de seguimiento:</Label>
-                      <p className="text-sm text-gray-600">
-                        {denuncia.codigo_seguimiento}
-                      </p>
-                    </div>
-
-                    <div>
-                      <Label className="font-semibold">Categoría:</Label>
-                      <p className="text-sm text-gray-600">
-                        {denuncia.categoria || 'Sin categoría'}
-                      </p>
-                    </div>
-
-                    <div>
-                      <Label className="font-semibold">Relación con la empresa:</Label>
-                      <p className="text-sm text-gray-600">
-                        {denuncia.relacion_empresa || 'No especificada'}
-                      </p>
-                    </div>
-
-                    <div>
-                      <Label className="font-semibold">Fecha de creación:</Label>
-                      <p className="text-sm text-gray-600">
-                        {new Date(denuncia.created_at).toLocaleString('es-ES')}
-                      </p>
-                    </div>
-
-                    <div>
-                      <Label className="font-semibold">Estado:</Label>
-                      <div className="mt-1">
-                        <EstadoBadge estado={denuncia.estado} />
-                      </div>
-                    </div>
-
-                    <div>
-                      <Label className="font-semibold">Asignado a:</Label>
-                      <p className="text-sm text-gray-600">
-                        {denuncia.asignado_a ? getNombreAdministrador(denuncia.asignado_a) : 'Sin asignar'}
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Detalles de los hechos */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center">
-                      <Calendar className="w-5 h-5 mr-2" />
-                      Detalles de los Hechos
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {denuncia.fecha_hechos && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Información de la Denuncia */}
+                <div className="space-y-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center">
+                        <FileText className="w-5 h-5 mr-2" />
+                        Información de la Denuncia
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
                       <div>
-                        <Label className="font-semibold">Fecha de los hechos:</Label>
-                        <p className="text-sm text-gray-600">
-                          {new Date(denuncia.fecha_hechos).toLocaleDateString('es-ES')}
+                        <Label className="text-sm font-medium text-gray-600">Estado Actual</Label>
+                        <div className="mt-1">
+                          <EstadoBadge estado={denuncia.estado as EstadoDenuncia} />
+                        </div>
+                      </div>
+
+                      <div>
+                        <Label className="text-sm font-medium text-gray-600">Categoría</Label>
+                        <p className="mt-1">{denuncia.categoria || 'Sin categoría'}</p>
+                      </div>
+
+                      <div>
+                        <Label className="text-sm font-medium text-gray-600">Fecha de Creación</Label>
+                        <p className="mt-1">{new Date(denuncia.created_at).toLocaleDateString('es-ES')}</p>
+                      </div>
+
+                      <div>
+                        <Label className="text-sm font-medium text-gray-600">Última Actualización</Label>
+                        <p className="mt-1">{new Date(denuncia.updated_at).toLocaleDateString('es-ES')}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center">
+                        <User className="w-5 h-5 mr-2" />
+                        Datos del Denunciante
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div>
+                        <Label className="text-sm font-medium text-gray-600">Email</Label>
+                        <p className="mt-1">{getDecryptedValue(denuncia.email_encriptado)}</p>
+                      </div>
+
+                      <div>
+                        <Label className="text-sm font-medium text-gray-600">Nombre</Label>
+                        <p className="mt-1">{getDecryptedValue(denuncia.nombre_encriptado)}</p>
+                      </div>
+
+                      <div>
+                        <Label className="text-sm font-medium text-gray-600">Teléfono</Label>
+                        <p className="mt-1">{getDecryptedValue(denuncia.telefono_encriptado)}</p>
+                      </div>
+
+                      <div>
+                        <Label className="text-sm font-medium text-gray-600">Domicilio</Label>
+                        <p className="mt-1">{getDecryptedValue(denuncia.domicilio_encriptado)}</p>
+                      </div>
+
+                      <div>
+                        <Label className="text-sm font-medium text-gray-600">Relación con la Empresa</Label>
+                        <p className="mt-1">{denuncia.relacion_empresa || 'No especificada'}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Detalles del Incidente */}
+                <div className="space-y-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center">
+                        <Calendar className="w-5 h-5 mr-2" />
+                        Detalles del Incidente
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div>
+                        <Label className="text-sm font-medium text-gray-600">Descripción de los Hechos</Label>
+                        <div className="mt-1 p-3 bg-gray-50 rounded-md">
+                          <p className="text-sm">{denuncia.hechos}</p>
+                        </div>
+                      </div>
+
+                      <div>
+                        <Label className="text-sm font-medium text-gray-600">Fecha de los Hechos</Label>
+                        <p className="mt-1">
+                          {denuncia.fecha_hechos 
+                            ? new Date(denuncia.fecha_hechos).toLocaleDateString('es-ES')
+                            : 'No especificada'
+                          }
                         </p>
                       </div>
-                    )}
 
-                    {denuncia.lugar_hechos && (
                       <div>
-                        <Label className="font-semibold">Lugar de los hechos:</Label>
-                        <p className="text-sm text-gray-600">{denuncia.lugar_hechos}</p>
+                        <Label className="text-sm font-medium text-gray-600">Lugar de los Hechos</Label>
+                        <p className="mt-1">{denuncia.lugar_hechos || 'No especificado'}</p>
                       </div>
-                    )}
 
-                    {denuncia.personas_implicadas && (
                       <div>
-                        <Label className="font-semibold">Personas implicadas:</Label>
-                        <p className="text-sm text-gray-600">{denuncia.personas_implicadas}</p>
+                        <Label className="text-sm font-medium text-gray-600">Testigos</Label>
+                        <p className="mt-1">{denuncia.testigos || 'No especificados'}</p>
                       </div>
-                    )}
 
-                    {denuncia.testigos && (
                       <div>
-                        <Label className="font-semibold">Testigos:</Label>
-                        <p className="text-sm text-gray-600">{denuncia.testigos}</p>
+                        <Label className="text-sm font-medium text-gray-600">Personas Implicadas</Label>
+                        <p className="mt-1">{denuncia.personas_implicadas || 'No especificadas'}</p>
                       </div>
-                    )}
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
+
+                  {/* Gestión del Estado */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Gestión del Estado</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div>
+                        <Label htmlFor="estado">Nuevo Estado</Label>
+                        <select
+                          id="estado"
+                          value={nuevoEstado}
+                          onChange={(e) => setNuevoEstado(e.target.value as EstadoDenuncia)}
+                          className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value="pendiente">Pendiente</option>
+                          <option value="en_proceso">En Proceso</option>
+                          <option value="finalizada">Finalizada</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <Label htmlFor="observaciones">Observaciones del Cambio</Label>
+                        <Textarea
+                          id="observaciones"
+                          value={observaciones}
+                          onChange={(e) => setObservaciones(e.target.value)}
+                          placeholder="Describe las acciones realizadas o motivo del cambio..."
+                          className="mt-1"
+                          rows={3}
+                        />
+                      </div>
+
+                      <div>
+                        <Label htmlFor="observaciones-internas">Observaciones Internas</Label>
+                        <Textarea
+                          id="observaciones-internas"
+                          value={observacionesInternas}
+                          onChange={(e) => setObservacionesInternas(e.target.value)}
+                          placeholder="Notas internas sobre la denuncia..."
+                          className="mt-1"
+                          rows={3}
+                        />
+                      </div>
+
+                      <Button 
+                        onClick={actualizarDenuncia} 
+                        disabled={guardando}
+                        className="w-full"
+                      >
+                        <Save className="w-4 h-4 mr-2" />
+                        {guardando ? "Guardando..." : "Guardar Cambios"}
+                      </Button>
+                    </CardContent>
+                  </Card>
+                </div>
               </div>
 
-              {/* Descripción de los hechos */}
-              <Card className="mb-6">
-                <CardHeader>
-                  <CardTitle>Descripción de los Hechos</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-gray-700 whitespace-pre-wrap">{denuncia.hechos}</p>
-                </CardContent>
-              </Card>
-
-              {/* Archivos existentes */}
-              {archivos.length > 0 && (
-                <Card className="mb-6">
-                  <CardHeader>
-                    <CardTitle className="flex items-center">
-                      <Paperclip className="w-5 h-5 mr-2" />
-                      Archivos Adjuntos ({archivos.length})
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {archivos.map((archivo) => (
-                        <div key={archivo.id} className="border rounded-lg p-3">
-                          <div className="flex items-center space-x-2">
-                            <FileText className="w-4 h-4 text-gray-500" />
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium truncate">{archivo.nombre_archivo}</p>
-                              <p className="text-xs text-gray-500">
-                                {archivo.tamano_archivo ? `${(archivo.tamano_archivo / 1024).toFixed(1)} KB` : 'Tamaño desconocido'}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Gestión de la denuncia */}
-              <Card className="mb-6">
-                <CardHeader>
-                  <CardTitle>Gestión de la Denuncia</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="estado">Estado de la denuncia</Label>
-                      <Select value={nuevoEstado} onValueChange={(value) => setNuevoEstado(value as 'pendiente' | 'en_proceso' | 'finalizada')}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Seleccionar estado" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="pendiente">Pendiente</SelectItem>
-                          <SelectItem value="en_proceso">En Proceso</SelectItem>
-                          <SelectItem value="finalizada">Finalizada</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div>
-                      <Label htmlFor="asignado">Asignado a</Label>
-                      <Select value={administradorAsignado} onValueChange={setAdministradorAsignado}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Seleccionar administrador" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="unassigned">Sin asignar</SelectItem>
-                          {administradores.map((admin) => (
-                            <SelectItem key={admin.id} value={admin.id}>
-                              {admin.nombre} ({admin.email})
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="acciones">Acciones realizadas</Label>
-                    <Textarea
-                      id="acciones"
-                      value={accionesRealizadas}
-                      onChange={(e) => setAccionesRealizadas(e.target.value)}
-                      placeholder="Describe las acciones llevadas a cabo..."
-                      rows={3}
-                      className="mt-1"
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="observaciones">Observaciones internas</Label>
-                    <Textarea
-                      id="observaciones"
-                      value={observaciones}
-                      onChange={(e) => setObservaciones(e.target.value)}
-                      placeholder="Notas internas sobre el caso..."
-                      rows={3}
-                      className="mt-1"
-                    />
-                  </div>
-
-                  <div>
-                    <Label>Adjuntar nuevos archivos</Label>
-                    <FileUpload 
-                      files={nuevosArchivos}
-                      onFilesChange={setNuevosArchivos}
-                      maxFiles={5}
-                    />
-                  </div>
-
-                  <Button onClick={actualizarDenuncia} disabled={guardando}>
-                    <Save className="w-4 h-4 mr-2" />
-                    {guardando ? "Guardando..." : "Guardar cambios"}
-                  </Button>
-                </CardContent>
-              </Card>
-
-              {/* Historial de seguimiento */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Historial de Seguimiento</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {seguimientos.length === 0 ? (
-                    <p className="text-gray-500 text-center py-4">
-                      No hay registros de seguimiento
-                    </p>
-                  ) : (
-                    <div className="space-y-4">
-                      {seguimientos.map((seguimiento) => (
-                        <div key={seguimiento.id} className="border-l-4 border-blue-500 pl-4 py-2">
-                          <div className="flex justify-between items-start mb-2">
-                            <div>
-                              <Badge variant="outline" className="mb-1">
-                                {seguimiento.operacion}
-                              </Badge>
-                              {seguimiento.estado_anterior && seguimiento.estado_nuevo && (
-                                <p className="text-sm text-gray-600">
-                                  Estado: {seguimiento.estado_anterior} → {seguimiento.estado_nuevo}
-                                </p>
-                              )}
-                            </div>
-                            <span className="text-xs text-gray-500">
-                              {new Date(seguimiento.created_at).toLocaleString('es-ES')}
-                            </span>
-                          </div>
-                          
-                          {seguimiento.acciones_realizadas && (
-                            <div className="mb-2">
-                              <Label className="text-xs font-semibold">Acciones realizadas:</Label>
-                              <p className="text-sm text-gray-700">{seguimiento.acciones_realizadas}</p>
-                            </div>
-                          )}
-                          
-                          {seguimiento.observaciones && (
-                            <div>
-                              <Label className="text-xs font-semibold">Observaciones:</Label>
-                              <p className="text-sm text-gray-700">{seguimiento.observaciones}</p>
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+              {/* Historial de Seguimiento */}
+              <div className="mt-8">
+                <HistorialSeguimiento denunciaId={denuncia.id} />
+              </div>
             </div>
           </div>
         </SidebarInset>

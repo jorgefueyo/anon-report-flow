@@ -7,7 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Search, Eye, FileText, Clock } from "lucide-react";
+import { Search, Eye, FileText, Clock, Home } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import AppHeader from "@/components/AppHeader";
 
 interface Denuncia {
@@ -34,6 +35,7 @@ const ConsultarDenuncia = () => {
   const [seguimientos, setSeguimientos] = useState<SeguimientoDenuncia[]>([]);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const buscarDenuncia = async () => {
     if (!codigoSeguimiento.trim()) {
@@ -64,7 +66,13 @@ const ConsultarDenuncia = () => {
         return;
       }
 
-      setDenuncia(data);
+      // Cast del estado para asegurar tipo correcto
+      const denunciaTyped: Denuncia = {
+        ...data,
+        estado: data.estado as 'pendiente' | 'en_proceso' | 'finalizada'
+      };
+
+      setDenuncia(denunciaTyped);
 
       // Cargar el historial de seguimiento
       const { data: seguimientosData, error: seguimientosError } = await supabase
@@ -252,9 +260,10 @@ const ConsultarDenuncia = () => {
               </div>
             )}
             
-            <div className="text-center">
-              <Button variant="link" onClick={() => window.history.back()}>
-                ← Volver
+            <div className="text-center space-x-4">
+              <Button variant="link" onClick={() => navigate('/')}>
+                <Home className="w-4 h-4 mr-2" />
+                Página Principal
               </Button>
             </div>
           </CardContent>

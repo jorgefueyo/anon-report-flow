@@ -1,10 +1,9 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -18,12 +17,14 @@ import {
   SidebarInset
 } from "@/components/ui/sidebar";
 import { 
-  Search,
-  Eye
+  Eye,
+  ChevronUp,
+  ChevronDown
 } from "lucide-react";
 import BackofficeSidebar from "@/components/BackofficeSidebar";
 import BackofficeHeader from "@/components/BackofficeHeader";
 import EstadoBadge from "@/components/EstadoBadge";
+import DenunciasFilters from "@/components/DenunciasFilters";
 import { supabase } from "@/integrations/supabase/client";
 import { decryptData } from "@/utils/encryption";
 
@@ -37,11 +38,14 @@ interface DenunciaResumen {
   id: string;
   codigo_seguimiento: string;
   email_encriptado: string;
-  estado: string; // Cambiado de union type a string
+  estado: string;
   categoria: string | null;
   created_at: string;
   hechos: string;
 }
+
+type SortField = 'estado' | 'categoria' | 'created_at';
+type SortDirection = 'asc' | 'desc';
 
 const BackofficeDenuncias = () => {
   const [admin, setAdmin] = useState<Admin | null>(null);
@@ -49,6 +53,10 @@ const BackofficeDenuncias = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [filtroEstado, setFiltroEstado] = useState<string>("todos");
+  const [fechaDesde, setFechaDesde] = useState("");
+  const [fechaHasta, setFechaHasta] = useState("");
+  const [sortField, setSortField] = useState<SortField>('created_at');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -91,7 +99,6 @@ const BackofficeDenuncias = () => {
       }
 
       console.log('Denuncias cargadas:', data);
-      // Cast para asegurar compatibilidad de tipos
       setDenuncias((data || []) as DenunciaResumen[]);
     } catch (error) {
       console.error('Error:', error);
@@ -105,16 +112,79 @@ const BackofficeDenuncias = () => {
     }
   };
 
-  const denunciasFiltradas = denuncias.filter((denuncia) => {
-    const cumpleBusqueda = searchTerm === "" || 
-      denuncia.codigo_seguimiento.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      denuncia.hechos.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (denuncia.categoria && denuncia.categoria.toLowerCase().includes(searchTerm.toLowerCase()));
+  const denunciasFiltradas = useMemo(() => {
+    let filtered = denuncias.filter((denuncia) => {
+      // Filtro de búsqueda
+      const cumpleBusqueda = searchTerm === "" || 
+        denuncia.codigo_seguimiento.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        denuncia.hechos.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (denuncia.categoria && denuncia.categoria.toLowerCase().includes(searchTerm.toLowerCase()));
 
-    const cumpleEstado = filtroEstado === "todos" || denuncia.estado === filtroEstado;
+      // Filtro de estado
+      const cumpleEstado = filtroEstado === "todos" || denuncia.estado === filtroEstado;
 
-    return cumpleBusqueda && cumpleEstado;
-  });
+      // Filtro de fechas
+      let cumpleFecha = true;
+      if (fechaDesde) {
+        const fechaDenuncia = new Date(denuncia.created_at);
+        const fechaMin = new Date(fechaDesde);
+        cumpleFecha = cumpleFecha && fechaDenuncia >= fechaMin;
+      }
+      if (fechaHasta) {
+        const fechaDenuncia = new Date(denuncia.created_at);
+        const fechaMax = new Date(fechaHasta);
+        fechaMax.setHours(23, 59, 59, 999); // Incluir todo el día
+        cumpleFecha = cumpleFecha && fechaDenuncia <= fechaMax;
+      }
+
+      return cumpleBusqueda && cumpleEstado && cumpleFecha;
+    });
+
+    // Ordenamiento
+    filtered.sort((a, b) => {
+      let aValue: any;
+      let bValue: any;
+
+      switch (sortField) {
+        case 'estado':
+          aValue = a.estado;
+          bValue = b.estado;
+          break;
+        case 'categoria':
+          aValue = a.categoria || '';
+          bValue = b.categoria || '';
+          break;
+        case 'created_at':
+          aValue = new Date(a.created_at);
+          bValue = new Date(b.created_at);
+          break;
+        default:
+          return 0;
+      }
+
+      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+    return filtered;
+  }, [denuncias, searchTerm, filtroEstado, fechaDesde, fechaHasta, sortField, sortDirection]);
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  const getSortIcon = (field: SortField) => {
+    if (sortField !== field) return null;
+    return sortDirection === 'asc' ? 
+      <ChevronUp className="w-4 h-4 ml-1" /> : 
+      <ChevronDown className="w-4 h-4 ml-1" />;
+  };
 
   const getEmailDesencriptado = (emailEncriptado: string) => {
     try {
@@ -152,55 +222,31 @@ const BackofficeDenuncias = () => {
               </div>
 
               {/* Filtros */}
-              <Card className="mb-6">
-                <CardHeader>
-                  <CardTitle className="text-lg">Filtros de búsqueda</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex gap-4 items-end">
-                    <div className="flex-1">
-                      <label className="text-sm font-medium mb-1 block">Buscar</label>
-                      <div className="relative">
-                        <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                        <Input
-                          placeholder="Código, categoría o descripción..."
-                          value={searchTerm}
-                          onChange={(e) => setSearchTerm(e.target.value)}
-                          className="pl-10"
-                        />
-                      </div>
-                    </div>
-                    <div className="w-48">
-                      <label className="text-sm font-medium mb-1 block">Estado</label>
-                      <select
-                        value={filtroEstado}
-                        onChange={(e) => setFiltroEstado(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
-                        <option value="todos">Todos los estados</option>
-                        <option value="pendiente">Pendiente</option>
-                        <option value="en_proceso">En Proceso</option>
-                        <option value="finalizada">Finalizada</option>
-                      </select>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              <DenunciasFilters
+                searchTerm={searchTerm}
+                setSearchTerm={setSearchTerm}
+                filtroEstado={filtroEstado}
+                setFiltroEstado={setFiltroEstado}
+                fechaDesde={fechaDesde}
+                setFechaDesde={setFechaDesde}
+                fechaHasta={fechaHasta}
+                setFechaHasta={setFechaHasta}
+              />
 
               {/* Estadísticas */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
                 <Card>
                   <CardContent className="p-4">
                     <div className="text-2xl font-bold text-blue-600">
-                      {denuncias.length}
+                      {denunciasFiltradas.length}
                     </div>
-                    <p className="text-sm text-gray-500">Total denuncias</p>
+                    <p className="text-sm text-gray-500">Denuncias filtradas</p>
                   </CardContent>
                 </Card>
                 <Card>
                   <CardContent className="p-4">
                     <div className="text-2xl font-bold text-yellow-600">
-                      {denuncias.filter(d => d.estado === 'pendiente').length}
+                      {denunciasFiltradas.filter(d => d.estado === 'pendiente').length}
                     </div>
                     <p className="text-sm text-gray-500">Pendientes</p>
                   </CardContent>
@@ -208,7 +254,7 @@ const BackofficeDenuncias = () => {
                 <Card>
                   <CardContent className="p-4">
                     <div className="text-2xl font-bold text-orange-600">
-                      {denuncias.filter(d => d.estado === 'en_proceso').length}
+                      {denunciasFiltradas.filter(d => d.estado === 'en_proceso').length}
                     </div>
                     <p className="text-sm text-gray-500">En proceso</p>
                   </CardContent>
@@ -216,7 +262,7 @@ const BackofficeDenuncias = () => {
                 <Card>
                   <CardContent className="p-4">
                     <div className="text-2xl font-bold text-green-600">
-                      {denuncias.filter(d => d.estado === 'finalizada').length}
+                      {denunciasFiltradas.filter(d => d.estado === 'finalizada').length}
                     </div>
                     <p className="text-sm text-gray-500">Finalizadas</p>
                   </CardContent>
@@ -237,7 +283,7 @@ const BackofficeDenuncias = () => {
                     </div>
                   ) : denunciasFiltradas.length === 0 ? (
                     <div className="text-center py-8 text-gray-500">
-                      No se encontraron denuncias
+                      No se encontraron denuncias con los filtros aplicados
                     </div>
                   ) : (
                     <Table>
@@ -245,9 +291,33 @@ const BackofficeDenuncias = () => {
                         <TableRow>
                           <TableHead>Código</TableHead>
                           <TableHead>Email</TableHead>
-                          <TableHead>Categoría</TableHead>
-                          <TableHead>Estado</TableHead>
-                          <TableHead>Fecha</TableHead>
+                          <TableHead 
+                            className="cursor-pointer hover:bg-gray-50"
+                            onClick={() => handleSort('categoria')}
+                          >
+                            <div className="flex items-center">
+                              Categoría
+                              {getSortIcon('categoria')}
+                            </div>
+                          </TableHead>
+                          <TableHead 
+                            className="cursor-pointer hover:bg-gray-50"
+                            onClick={() => handleSort('estado')}
+                          >
+                            <div className="flex items-center">
+                              Estado
+                              {getSortIcon('estado')}
+                            </div>
+                          </TableHead>
+                          <TableHead 
+                            className="cursor-pointer hover:bg-gray-50"
+                            onClick={() => handleSort('created_at')}
+                          >
+                            <div className="flex items-center">
+                              Fecha
+                              {getSortIcon('created_at')}
+                            </div>
+                          </TableHead>
                           <TableHead>Acciones</TableHead>
                         </TableRow>
                       </TableHeader>
