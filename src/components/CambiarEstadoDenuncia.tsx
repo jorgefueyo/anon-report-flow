@@ -24,8 +24,7 @@ const CambiarEstadoDenuncia = ({ denunciaId, estadoActual, onEstadoCambiado }: C
 
   const estados = [
     { value: 'pendiente', label: 'Pendiente' },
-    { value: 'asignada', label: 'Asignada' },
-    { value: 'en_tramite', label: 'En Trámite' },
+    { value: 'en_proceso', label: 'En Proceso' },
     { value: 'finalizada', label: 'Finalizada' }
   ];
 

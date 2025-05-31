@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -20,7 +19,7 @@ interface DenunciaDetalle {
   id: string;
   codigo_seguimiento: string;
   categoria: string | null;
-  estado: 'pendiente' | 'asignada' | 'en_tramite' | 'finalizada';
+  estado: 'pendiente' | 'en_proceso' | 'finalizada';
   created_at: string;
   hechos: string;
   fecha_hechos: string | null;
@@ -204,7 +203,7 @@ const DetalleDenuncia = () => {
                     <CambiarEstadoDenuncia 
                       denunciaId={denuncia.id}
                       estadoActual={denuncia.estado}
-                      onEstadoChanged={loadDenuncia}
+                      onEstadoCambiado={loadDenuncia}
                     />
                     
                     <HistorialSeguimiento denunciaId={denuncia.id} />
