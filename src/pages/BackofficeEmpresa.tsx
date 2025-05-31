@@ -40,6 +40,10 @@ interface Empresa {
   nombre: string;
   cif: string;
   direccion: string | null;
+  codigo_postal: string | null;
+  ciudad: string | null;
+  provincia: string | null;
+  pais: string | null;
   email: string | null;
   telefono: string | null;
   configurada: boolean | null;
@@ -47,7 +51,19 @@ interface Empresa {
 
 const BackofficeEmpresa = () => {
   const [admin, setAdmin] = useState<Admin | null>(null);
-  const [empresa, setEmpresa] = useState<Empresa | null>(null);
+  const [empresa, setEmpresa] = useState<Empresa>({
+    id: '',
+    nombre: '',
+    cif: '',
+    direccion: '',
+    codigo_postal: '',
+    ciudad: '',
+    provincia: '',
+    pais: 'España',
+    email: '',
+    telefono: '',
+    configurada: false
+  });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const navigate = useNavigate();
@@ -79,8 +95,23 @@ const BackofficeEmpresa = () => {
         .eq('cif', '12345678A')
         .single();
 
-      if (error) {
+      if (error && error.code !== 'PGRST116') {
         console.error('Error loading empresa:', error);
+      } else if (data) {
+        setEmpresa({
+          id: data.id,
+          nombre: data.nombre || '',
+          cif: data.cif || '',
+          direccion: data.direccion || '',
+          codigo_postal: data.codigo_postal || '',
+          ciudad: data.ciudad || '',
+          provincia: data.provincia || '',
+          pais: data.pais || 'España',
+          email: data.email || '',
+          telefono: data.telefono || '',
+          configurada: data.configurada || false
+        });
+      } else {
         // Si no existe la empresa, crear una nueva
         const { data: newEmpresa, error: createError } = await supabase
           .from('empresas')
@@ -88,6 +119,10 @@ const BackofficeEmpresa = () => {
             nombre: 'Mi Empresa',
             cif: '12345678A',
             direccion: '',
+            codigo_postal: '',
+            ciudad: '',
+            provincia: '',
+            pais: 'España',
             email: '',
             telefono: '',
             configurada: false
@@ -98,10 +133,20 @@ const BackofficeEmpresa = () => {
         if (createError) {
           console.error('Error creating empresa:', createError);
         } else {
-          setEmpresa(newEmpresa);
+          setEmpresa({
+            id: newEmpresa.id,
+            nombre: newEmpresa.nombre,
+            cif: newEmpresa.cif,
+            direccion: newEmpresa.direccion || '',
+            codigo_postal: newEmpresa.codigo_postal || '',
+            ciudad: newEmpresa.ciudad || '',
+            provincia: newEmpresa.provincia || '',
+            pais: newEmpresa.pais || 'España',
+            email: newEmpresa.email || '',
+            telefono: newEmpresa.telefono || '',
+            configurada: newEmpresa.configurada || false
+          });
         }
-      } else {
-        setEmpresa(data);
       }
     } catch (error) {
       console.error('Error loading empresa:', error);
@@ -112,7 +157,7 @@ const BackofficeEmpresa = () => {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!empresa) return;
+    if (!empresa.id) return;
 
     setSaving(true);
     try {
@@ -122,6 +167,10 @@ const BackofficeEmpresa = () => {
           nombre: empresa.nombre,
           cif: empresa.cif,
           direccion: empresa.direccion,
+          codigo_postal: empresa.codigo_postal,
+          ciudad: empresa.ciudad,
+          provincia: empresa.provincia,
+          pais: empresa.pais,
           email: empresa.email,
           telefono: empresa.telefono,
           configurada: true
@@ -243,105 +292,148 @@ const BackofficeEmpresa = () => {
                 Configuración de Empresa
               </h1>
               
-              {empresa && (
-                <form onSubmit={handleSave} className="space-y-6">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Datos Básicos</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <Label htmlFor="nombre">Nombre de la Empresa *</Label>
-                          <Input
-                            id="nombre"
-                            value={empresa.nombre}
-                            onChange={(e) => setEmpresa({...empresa, nombre: e.target.value})}
-                            required
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="cif">CIF/NIF *</Label>
-                          <Input
-                            id="cif"
-                            value={empresa.cif}
-                            onChange={(e) => setEmpresa({...empresa, cif: e.target.value})}
-                            required
-                          />
-                        </div>
-                      </div>
-                      
+              <form onSubmit={handleSave} className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Datos Básicos</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <Label htmlFor="direccion">Dirección</Label>
-                        <Textarea
-                          id="direccion"
-                          value={empresa.direccion || ''}
-                          onChange={(e) => setEmpresa({...empresa, direccion: e.target.value})}
-                          placeholder="Dirección completa de la empresa"
+                        <Label htmlFor="nombre">Nombre de la Empresa *</Label>
+                        <Input
+                          id="nombre"
+                          value={empresa.nombre}
+                          onChange={(e) => setEmpresa({...empresa, nombre: e.target.value})}
+                          required
                         />
                       </div>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <Label htmlFor="email">Email</Label>
-                          <Input
-                            id="email"
-                            type="email"
-                            value={empresa.email || ''}
-                            onChange={(e) => setEmpresa({...empresa, email: e.target.value})}
-                            placeholder="contacto@empresa.com"
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="telefono">Teléfono</Label>
-                          <Input
-                            id="telefono"
-                            value={empresa.telefono || ''}
-                            onChange={(e) => setEmpresa({...empresa, telefono: e.target.value})}
-                            placeholder="123 456 789"
-                          />
-                        </div>
+                      <div>
+                        <Label htmlFor="cif">CIF/NIF *</Label>
+                        <Input
+                          id="cif"
+                          value={empresa.cif}
+                          onChange={(e) => setEmpresa({...empresa, cif: e.target.value})}
+                          required
+                        />
                       </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Logo de la Empresa</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-4">
-                        <p className="text-sm text-gray-600">
-                          Sube el logo de tu empresa (formato JPG o PNG, tamaño máximo 400x400px)
-                        </p>
-                        <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                          <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                          <p className="text-gray-500 mb-2">Arrastra y suelta tu logo aquí</p>
-                          <Button type="button" variant="outline">
-                            Seleccionar archivo
-                          </Button>
-                        </div>
-                        <p className="text-xs text-gray-500">
-                          * El logo aparecerá en la página principal del canal de denuncias
-                        </p>
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="direccion">Dirección *</Label>
+                      <Input
+                        id="direccion"
+                        value={empresa.direccion || ''}
+                        onChange={(e) => setEmpresa({...empresa, direccion: e.target.value})}
+                        placeholder="Calle, número, etc."
+                        required
+                      />
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <Label htmlFor="codigo_postal">Código Postal *</Label>
+                        <Input
+                          id="codigo_postal"
+                          value={empresa.codigo_postal || ''}
+                          onChange={(e) => setEmpresa({...empresa, codigo_postal: e.target.value})}
+                          placeholder="28001"
+                          required
+                        />
                       </div>
-                    </CardContent>
-                  </Card>
+                      <div>
+                        <Label htmlFor="ciudad">Ciudad *</Label>
+                        <Input
+                          id="ciudad"
+                          value={empresa.ciudad || ''}
+                          onChange={(e) => setEmpresa({...empresa, ciudad: e.target.value})}
+                          placeholder="Madrid"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="provincia">Provincia *</Label>
+                        <Input
+                          id="provincia"
+                          value={empresa.provincia || ''}
+                          onChange={(e) => setEmpresa({...empresa, provincia: e.target.value})}
+                          placeholder="Madrid"
+                          required
+                        />
+                      </div>
+                    </div>
 
-                  <div className="flex justify-end">
-                    <Button type="submit" disabled={saving}>
-                      {saving ? (
-                        "Guardando..."
-                      ) : (
-                        <>
-                          <Save className="w-4 h-4 mr-2" />
-                          Guardar Configuración
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </form>
-              )}
+                    <div>
+                      <Label htmlFor="pais">País *</Label>
+                      <Input
+                        id="pais"
+                        value={empresa.pais || ''}
+                        onChange={(e) => setEmpresa({...empresa, pais: e.target.value})}
+                        placeholder="España"
+                        required
+                      />
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="email">Email de Contacto</Label>
+                        <Input
+                          id="email"
+                          type="email"
+                          value={empresa.email || ''}
+                          onChange={(e) => setEmpresa({...empresa, email: e.target.value})}
+                          placeholder="contacto@empresa.com"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="telefono">Teléfono de Contacto</Label>
+                        <Input
+                          id="telefono"
+                          value={empresa.telefono || ''}
+                          onChange={(e) => setEmpresa({...empresa, telefono: e.target.value})}
+                          placeholder="+34 123 456 789"
+                        />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Logo de la Empresa</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <p className="text-sm text-gray-600">
+                        Sube el logo de tu empresa (formato JPG o PNG, tamaño máximo 400x400px)
+                      </p>
+                      <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                        <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                        <p className="text-gray-500 mb-2">Arrastra y suelta tu logo aquí</p>
+                        <Button type="button" variant="outline">
+                          Seleccionar archivo
+                        </Button>
+                      </div>
+                      <p className="text-xs text-gray-500">
+                        * El logo aparecerá en la página principal del canal de denuncias
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <div className="flex justify-end">
+                  <Button type="submit" disabled={saving}>
+                    {saving ? (
+                      "Guardando..."
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4 mr-2" />
+                        Guardar Configuración
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </form>
             </div>
           </div>
         </SidebarInset>
