@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -212,7 +211,6 @@ const BackofficeGestionDenuncia = () => {
       const updateData: any = {
         estado: nuevoEstado,
         asignado_a: nuevoAsignadoId,
-        updated_at: new Date().toISOString()
       };
 
       // Solo agregar observaciones_internas si hay contenido
@@ -222,12 +220,13 @@ const BackofficeGestionDenuncia = () => {
 
       console.log('Datos para actualizar:', updateData);
 
-      // ACTUALIZAR LA DENUNCIA EN LA BASE DE DATOS - SIN .single()
+      // ACTUALIZAR LA DENUNCIA EN LA BASE DE DATOS
       const { data: updatedDenuncia, error: updateError } = await supabase
         .from('denuncias')
         .update(updateData)
         .eq('id', denuncia.id)
-        .select();
+        .select()
+        .single();
 
       if (updateError) {
         console.error('Error actualizando denuncia:', updateError);
@@ -239,7 +238,7 @@ const BackofficeGestionDenuncia = () => {
         return;
       }
 
-      if (!updatedDenuncia || updatedDenuncia.length === 0) {
+      if (!updatedDenuncia) {
         console.error('No se recibieron datos de la denuncia actualizada');
         toast({
           title: "Error",
@@ -249,11 +248,10 @@ const BackofficeGestionDenuncia = () => {
         return;
       }
 
-      const denunciaActualizada = updatedDenuncia[0];
-      console.log('Denuncia actualizada exitosamente:', denunciaActualizada);
+      console.log('Denuncia actualizada exitosamente:', updatedDenuncia);
 
       // Actualizar el estado local inmediatamente
-      setDenuncia(denunciaActualizada);
+      setDenuncia(updatedDenuncia);
 
       // Subir nuevos archivos si existen
       if (nuevosArchivos.length > 0) {

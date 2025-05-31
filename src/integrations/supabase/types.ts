@@ -92,7 +92,7 @@ export type Database = {
           domicilio_encriptado: string | null
           email_encriptado: string
           empresa_id: string | null
-          estado: Database["public"]["Enums"]["denuncia_estado"] | null
+          estado: string | null
           fecha_hechos: string | null
           hechos: string
           id: string
@@ -113,7 +113,7 @@ export type Database = {
           domicilio_encriptado?: string | null
           email_encriptado: string
           empresa_id?: string | null
-          estado?: Database["public"]["Enums"]["denuncia_estado"] | null
+          estado?: string | null
           fecha_hechos?: string | null
           hechos: string
           id?: string
@@ -134,7 +134,7 @@ export type Database = {
           domicilio_encriptado?: string | null
           email_encriptado?: string
           empresa_id?: string | null
-          estado?: Database["public"]["Enums"]["denuncia_estado"] | null
+          estado?: string | null
           fecha_hechos?: string | null
           hechos?: string
           id?: string
@@ -148,6 +148,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "denuncias_asignado_a_fkey"
+            columns: ["asignado_a"]
+            isOneToOne: false
+            referencedRelation: "administradores"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "denuncias_empresa_id_fkey"
             columns: ["empresa_id"]
