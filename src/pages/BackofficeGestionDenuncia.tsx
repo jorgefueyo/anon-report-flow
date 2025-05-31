@@ -35,6 +35,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Denuncia, SeguimientoDenuncia, DenunciaArchivo } from "@/types/denuncia";
 import { useAdministradores } from "@/hooks/useAdministradores";
 import { useDenuncias } from "@/hooks/useDenuncias";
+import { useEmailNotifications } from "@/hooks/useEmailNotifications";
+import { decryptData } from "@/utils/encryption";
 
 interface Admin {
   id: string;
@@ -67,6 +69,7 @@ const BackofficeGestionDenuncia = () => {
   const { toast } = useToast();
   const { obtenerAdministradores } = useAdministradores();
   const { obtenerArchivosDenuncia } = useDenuncias();
+  const { sendEstadoCambioNotification } = useEmailNotifications();
 
   useEffect(() => {
     // Verificar si hay admin logueado
@@ -202,11 +205,15 @@ const BackofficeGestionDenuncia = () => {
       const cambioAsignacion = asignadoAnterior !== nuevoAsignadoId;
 
       // Actualizar denuncia con los nuevos valores
-      const updateData = {
+      const updateData: any = {
         estado: nuevoEstado,
         asignado_a: nuevoAsignadoId,
-        observaciones_internas: observaciones.trim() || denuncia.observaciones_internas,
       };
+
+      // Solo agregar observaciones_internas si hay contenido
+      if (observaciones.trim()) {
+        updateData.observaciones_internas = observaciones.trim();
+      }
 
       console.log('Datos de actualización:', updateData);
 
@@ -288,6 +295,34 @@ const BackofficeGestionDenuncia = () => {
           });
         } else {
           console.log('Seguimiento creado exitosamente');
+        }
+      }
+
+      // Enviar notificación por email si cambió el estado
+      if (cambioEstado) {
+        try {
+          // Desencriptar el email del denunciante
+          const emailDenunciante = decryptData(denuncia.email_encriptado);
+          
+          // Obtener nombre de la empresa
+          const { data: empresaData } = await supabase
+            .from('empresas')
+            .select('nombre')
+            .eq('id', denuncia.empresa_id)
+            .single();
+
+          await sendEstadoCambioNotification(
+            emailDenunciante,
+            denuncia.codigo_seguimiento,
+            estadoAnterior,
+            nuevoEstado,
+            empresaData?.nombre
+          );
+
+          console.log('Notificación de cambio de estado enviada');
+        } catch (emailError) {
+          console.error('Error enviando notificación por email:', emailError);
+          // No mostramos error al usuario ya que la actualización fue exitosa
         }
       }
 

@@ -1,12 +1,15 @@
+
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Denuncia, FormularioDenuncia, DenunciaArchivo } from '@/types/denuncia';
 import { encryptData } from '@/utils/encryption';
+import { useEmailNotifications } from '@/hooks/useEmailNotifications';
 
 export const useDenuncias = () => {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const { sendNewDenunciaNotification } = useEmailNotifications();
 
   const crearDenuncia = async (datos: FormularioDenuncia): Promise<string | null> => {
     setLoading(true);
@@ -16,7 +19,7 @@ export const useDenuncias = () => {
       // Obtener la empresa por defecto (primera empresa)
       const { data: empresas, error: empresaError } = await supabase
         .from('empresas')
-        .select('id')
+        .select('id, nombre')
         .limit(1);
 
       console.log('Empresas encontradas:', empresas);
@@ -30,11 +33,11 @@ export const useDenuncias = () => {
         throw new Error('No se encontró empresa configurada');
       }
 
-      const empresa_id = empresas[0].id;
+      const empresa = empresas[0];
 
       // Preparar datos para inserción - usando un codigo_seguimiento temporal que será reemplazado por el trigger
       const datosInsercion = {
-        empresa_id,
+        empresa_id: empresa.id,
         codigo_seguimiento: 'TEMP-' + Date.now(), // Temporal, será reemplazado por el trigger
         email_encriptado: encryptData(datos.email),
         nombre_encriptado: datos.nombre ? encryptData(datos.nombre) : null,
@@ -75,6 +78,19 @@ export const useDenuncias = () => {
       if (datos.archivos && datos.archivos.length > 0) {
         console.log('Subiendo archivos:', datos.archivos.length);
         await subirArchivos(denuncia.id, datos.archivos);
+      }
+
+      // Enviar notificación por email al denunciante
+      try {
+        await sendNewDenunciaNotification(
+          datos.email,
+          denuncia.codigo_seguimiento,
+          empresa.nombre
+        );
+        console.log('Notificación de nueva denuncia enviada');
+      } catch (emailError) {
+        console.error('Error enviando notificación por email:', emailError);
+        // No mostramos error al usuario ya que la denuncia fue creada exitosamente
       }
 
       toast({
