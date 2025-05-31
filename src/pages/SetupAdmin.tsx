@@ -1,74 +1,69 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
-import { UserPlus } from "lucide-react";
+import { UserPlus, CheckCircle } from "lucide-react";
 
 const SetupAdmin = () => {
-  const [email, setEmail] = useState("admin@empresa.com");
-  const [password, setPassword] = useState("admin123456");
-  const [nombre, setNombre] = useState("Administrador");
   const [loading, setLoading] = useState(false);
+  const [adminExists, setAdminExists] = useState(false);
+  const [checkingAdmin, setCheckingAdmin] = useState(true);
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const handleSetupAdmin = async (e: React.FormEvent) => {
-    e.preventDefault();
+  useEffect(() => {
+    checkAdminExists();
+  }, []);
+
+  const checkAdminExists = async () => {
+    try {
+      // Verificar si ya existe un usuario admin
+      const { data: adminUser } = await supabase
+        .from('usuarios_backoffice')
+        .select('*')
+        .eq('email', 'admin@empresa.com')
+        .eq('rol', 'admin')
+        .maybeSingle();
+
+      setAdminExists(!!adminUser);
+    } catch (error) {
+      console.error('Error checking admin:', error);
+    } finally {
+      setCheckingAdmin(false);
+    }
+  };
+
+  const createDefaultAdmin = async () => {
     setLoading(true);
 
     try {
-      // Verificar si ya existe la empresa demo, si no crearla
-      let { data: empresa, error: empresaError } = await supabase
-        .from('empresas')
-        .select('*')
-        .eq('cif', '12345678A')
-        .maybeSingle();
+      // Ejecutar función para garantizar que existe la empresa demo
+      const { data: empresaId, error: empresaError } = await supabase
+        .rpc('create_initial_admin');
 
       if (empresaError) {
-        console.error('Error al buscar empresa:', empresaError);
+        console.error('Error creating empresa:', empresaError);
         toast({
           title: "Error",
-          description: "Error al verificar la empresa demo",
+          description: "No se pudo crear la empresa demo",
           variant: "destructive",
         });
         return;
       }
 
-      // Si no existe la empresa demo, crearla
-      if (!empresa) {
-        const { data: nuevaEmpresa, error: crearEmpresaError } = await supabase
-          .from('empresas')
-          .insert({
-            nombre: 'Empresa Demo',
-            cif: '12345678A',
-            email: 'demo@empresa.com',
-            direccion: 'Calle Demo 123, Madrid'
-          })
-          .select()
-          .single();
-
-        if (crearEmpresaError) {
-          console.error('Error al crear empresa:', crearEmpresaError);
-          toast({
-            title: "Error",
-            description: "No se pudo crear la empresa demo",
-            variant: "destructive",
-          });
-          return;
-        }
-
-        empresa = nuevaEmpresa;
-      }
-
-      // 1. Crear usuario en auth
+      // Crear usuario administrador en auth
       const { data: authData, error: authError } = await supabase.auth.signUp({
-        email,
-        password,
+        email: 'admin@empresa.com',
+        password: 'admin1234',
+        options: {
+          data: { 
+            force_password_reset: true,
+            nombre: 'Administrador'
+          }
+        }
       });
 
       if (authError) {
@@ -89,14 +84,30 @@ const SetupAdmin = () => {
         return;
       }
 
-      // 2. Crear registro en usuarios_backoffice con rol admin
+      // Obtener ID de empresa demo
+      const { data: empresa } = await supabase
+        .from('empresas')
+        .select('id')
+        .eq('cif', '12345678A')
+        .single();
+
+      if (!empresa) {
+        toast({
+          title: "Error",
+          description: "No se encontró la empresa demo",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Crear registro en usuarios_backoffice
       const { error: userError } = await supabase
         .from('usuarios_backoffice')
         .insert({
           auth_user_id: authData.user.id,
           empresa_id: empresa.id,
-          email: email,
-          nombre: nombre,
+          email: 'admin@empresa.com',
+          nombre: 'Administrador',
           rol: 'admin',
           activo: true
         });
@@ -113,11 +124,10 @@ const SetupAdmin = () => {
 
       toast({
         title: "Usuario administrador creado",
-        description: `Se ha creado el usuario ${email} con rol de administrador`,
+        description: "Usuario: admin@empresa.com | Contraseña: admin1234 (se solicitará cambio en el primer login)",
       });
 
-      // Redirigir al login
-      navigate('/login');
+      setAdminExists(true);
 
     } catch (error) {
       console.error('Error:', error);
@@ -131,6 +141,54 @@ const SetupAdmin = () => {
     }
   };
 
+  if (checkingAdmin) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md shadow-xl">
+          <CardContent className="pt-6 text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-4 text-gray-600">Verificando configuración...</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (adminExists) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md shadow-xl">
+          <CardHeader className="text-center">
+            <div className="mx-auto w-12 h-12 bg-green-600 rounded-full flex items-center justify-center mb-4">
+              <CheckCircle className="w-6 h-6 text-white" />
+            </div>
+            <CardTitle className="text-2xl font-bold text-gray-900">
+              Sistema Configurado
+            </CardTitle>
+            <p className="text-gray-600 mt-2">
+              El usuario administrador ya está creado
+            </p>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="p-4 bg-gray-50 rounded-lg">
+                <h4 className="text-sm font-semibold text-gray-900 mb-2">Credenciales de acceso:</h4>
+                <p className="text-sm text-gray-600">Email: admin@empresa.com</p>
+                <p className="text-sm text-gray-600">Contraseña: admin1234</p>
+              </div>
+              <Button 
+                onClick={() => navigate('/login')}
+                className="w-full"
+              >
+                Ir al Login
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100 flex items-center justify-center p-4">
       <Card className="w-full max-w-md shadow-xl">
@@ -139,70 +197,48 @@ const SetupAdmin = () => {
             <UserPlus className="w-6 h-6 text-white" />
           </div>
           <CardTitle className="text-2xl font-bold text-gray-900">
-            Configurar Administrador
+            Configurar Sistema
           </CardTitle>
           <p className="text-gray-600 mt-2">
-            Crear el primer usuario administrador del sistema
+            Crear el usuario administrador predeterminado
           </p>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSetupAdmin} className="space-y-4">
-            <div>
-              <Label htmlFor="nombre">Nombre completo</Label>
-              <Input
-                id="nombre"
-                type="text"
-                value={nombre}
-                onChange={(e) => setNombre(e.target.value)}
-                placeholder="Nombre del administrador"
-                required
-                className="mt-1"
-              />
+          <div className="space-y-4">
+            <div className="p-4 bg-blue-50 rounded-lg">
+              <h4 className="text-sm font-semibold text-blue-900 mb-2">Se creará un usuario administrador con:</h4>
+              <ul className="text-sm text-blue-700 space-y-1">
+                <li>• Email: admin@empresa.com</li>
+                <li>• Contraseña: admin1234</li>
+                <li>• Se solicitará cambio de contraseña en el primer login</li>
+                <li>• Acceso completo al sistema</li>
+              </ul>
             </div>
-            <div>
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@empresa.com"
-                required
-                className="mt-1"
-              />
-            </div>
-            <div>
-              <Label htmlFor="password">Contraseña</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Mínimo 6 caracteres"
-                required
-                minLength={6}
-                className="mt-1"
-              />
-            </div>
-            <Button type="submit" className="w-full bg-green-600 hover:bg-green-700" disabled={loading}>
+            
+            <Button 
+              onClick={createDefaultAdmin} 
+              className="w-full bg-green-600 hover:bg-green-700" 
+              disabled={loading}
+            >
               {loading ? (
                 "Creando administrador..."
               ) : (
                 <>
                   <UserPlus className="w-4 h-4 mr-2" />
-                  Crear Administrador
+                  Crear Usuario Administrador
                 </>
               )}
             </Button>
-          </form>
-          <div className="mt-6 text-center">
-            <Button 
-              variant="link" 
-              onClick={() => navigate('/login')}
-              className="text-blue-600"
-            >
-              ¿Ya tienes una cuenta? Inicia sesión
-            </Button>
+            
+            <div className="text-center">
+              <Button 
+                variant="link" 
+                onClick={() => navigate('/login')}
+                className="text-blue-600"
+              >
+                ¿Ya tienes una cuenta? Inicia sesión
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>

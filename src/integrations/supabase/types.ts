@@ -132,6 +132,55 @@ export type Database = {
         }
         Relationships: []
       }
+      historial_estados: {
+        Row: {
+          comentario: string | null
+          created_at: string
+          denuncia_id: string | null
+          estado_anterior: Database["public"]["Enums"]["denuncia_estado"] | null
+          estado_nuevo: Database["public"]["Enums"]["denuncia_estado"]
+          id: string
+          usuario_id: string | null
+        }
+        Insert: {
+          comentario?: string | null
+          created_at?: string
+          denuncia_id?: string | null
+          estado_anterior?:
+            | Database["public"]["Enums"]["denuncia_estado"]
+            | null
+          estado_nuevo: Database["public"]["Enums"]["denuncia_estado"]
+          id?: string
+          usuario_id?: string | null
+        }
+        Update: {
+          comentario?: string | null
+          created_at?: string
+          denuncia_id?: string | null
+          estado_anterior?:
+            | Database["public"]["Enums"]["denuncia_estado"]
+            | null
+          estado_nuevo?: Database["public"]["Enums"]["denuncia_estado"]
+          id?: string
+          usuario_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "historial_estados_denuncia_id_fkey"
+            columns: ["denuncia_id"]
+            isOneToOne: false
+            referencedRelation: "denuncias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "historial_estados_usuario_id_fkey"
+            columns: ["usuario_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios_backoffice"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       usuarios_backoffice: {
         Row: {
           activo: boolean | null
@@ -181,6 +230,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_initial_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       generate_codigo_seguimiento: {
         Args: Record<PropertyKey, never>
         Returns: string
