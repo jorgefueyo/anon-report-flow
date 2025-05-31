@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import NuevaDenuncia from "./pages/NuevaDenuncia";
 import ConsultarDenuncia from "./pages/ConsultarDenuncia";
 import Login from "./pages/Login";
+import SetupAdmin from "./pages/SetupAdmin";
 import Backoffice from "./pages/Backoffice";
 import GestionDenuncias from "./pages/GestionDenuncias";
 import NotFound from "./pages/NotFound";
@@ -23,11 +24,11 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/nueva-denuncia" element={<NuevaDenuncia />} />
-          <Route path="/consultar-denuncia" element={<ConsultarDenuncia />} />
+          <Route path="/consultar" element={<ConsultarDenuncia />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/setup-admin" element={<SetupAdmin />} />
           <Route path="/backoffice" element={<Backoffice />} />
           <Route path="/backoffice/denuncias" element={<GestionDenuncias />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

@@ -1,8 +1,5 @@
-
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Eye, Plus, FileText } from "lucide-react";
+import { Building2, LogIn, UserPlus } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const Index = () => {
@@ -12,120 +9,89 @@ const Index = () => {
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <FileText className="w-8 h-8 text-blue-600" />
-            <h1 className="text-2xl font-bold text-gray-900">Canal de Denuncias</h1>
+            <Building2 className="w-8 h-8 text-blue-600" />
+            <h1 className="text-xl font-semibold text-gray-900">Canal de Denuncias</h1>
           </div>
-          <div className="text-sm text-gray-500">
-            Sistema Anónimo y Confidencial
+          <div className="flex items-center space-x-4">
+            <Link to="/setup-admin">
+              <Button variant="outline" size="sm">
+                <UserPlus className="w-4 h-4 mr-2" />
+                Configurar Admin
+              </Button>
+            </Link>
+            <Link to="/login">
+              <Button variant="outline" size="sm">
+                <LogIn className="w-4 h-4 mr-2" />
+                Acceso Backoffice
+              </Button>
+            </Link>
           </div>
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="max-w-4xl mx-auto px-4 py-12">
-        <div className="text-center mb-12">
-          <h2 className="text-4xl font-bold text-gray-900 mb-4">
-            Canal de Denuncias Empresarial
+      {/* Hero Section */}
+      <section className="py-20 px-4">
+        <div className="max-w-3xl mx-auto text-center">
+          <h2 className="text-4xl font-extrabold text-gray-900 mb-4">
+            Tu voz importa. Denuncia de forma segura y anónima.
           </h2>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Sistema seguro y anónimo para reportar irregularidades. 
-            Tu identidad permanecerá protegida durante todo el proceso.
+          <p className="text-lg text-gray-700 mb-8">
+            Nuestro canal de denuncias te permite reportar irregularidades de manera confidencial.
+            Tu identidad está protegida y tu reporte contribuye a un ambiente laboral más transparente.
           </p>
+          <div className="flex items-center justify-center space-x-4">
+            <Link to="/nueva-denuncia">
+              <Button className="bg-blue-600 hover:bg-blue-700 text-white">
+                Realizar una Denuncia
+              </Button>
+            </Link>
+            <Link to="/consultar">
+              <Button variant="outline">
+                Consultar Estado
+              </Button>
+            </Link>
+          </div>
         </div>
+      </section>
 
-        {/* Action Cards */}
-        <div className="grid md:grid-cols-2 gap-8 mb-12">
-          {/* Ver Estado de Denuncia */}
-          <Card className="group hover:shadow-xl transition-all duration-300 border-2 hover:border-blue-200 bg-gradient-to-br from-blue-50 to-white">
-            <CardContent className="p-8 text-center">
-              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6 group-hover:bg-blue-200 transition-colors">
-                <Eye className="w-8 h-8 text-blue-600" />
-              </div>
-              <h3 className="text-2xl font-semibold text-gray-900 mb-4">
-                Ver Estado de Denuncia
-              </h3>
-              <p className="text-gray-600 mb-6">
-                Consulta el progreso de tu denuncia utilizando el código que recibiste al registrarla.
-              </p>
-              <Link to="/consultar-denuncia">
-                <Button 
-                  size="lg" 
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 text-lg"
-                >
-                  Consultar Estado
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
+      {/* Features Section */}
+      <section className="py-16 px-4 bg-white">
+        <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {/* Feature 1 */}
+          <div className="p-6 bg-gray-50 rounded-lg shadow-md">
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">Anonimato Garantizado</h3>
+            <p className="text-gray-600">
+              Tu identidad se mantiene en secreto. Utilizamos tecnología de encriptación para proteger tus datos personales.
+            </p>
+          </div>
 
-          {/* Registrar Nueva Denuncia */}
-          <Card className="group hover:shadow-xl transition-all duration-300 border-2 hover:border-green-200 bg-gradient-to-br from-green-50 to-white">
-            <CardContent className="p-8 text-center">
-              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6 group-hover:bg-green-200 transition-colors">
-                <Plus className="w-8 h-8 text-green-600" />
-              </div>
-              <h3 className="text-2xl font-semibold text-gray-900 mb-4">
-                Registrar Nueva Denuncia
-              </h3>
-              <p className="text-gray-600 mb-6">
-                Reporta una irregularidad de forma anónima y segura. Te proporcionaremos un código de seguimiento.
-              </p>
-              <Link to="/nueva-denuncia">
-                <Button 
-                  size="lg" 
-                  className="w-full bg-green-600 hover:bg-green-700 text-white py-3 text-lg"
-                >
-                  Crear Denuncia
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
+          {/* Feature 2 */}
+          <div className="p-6 bg-gray-50 rounded-lg shadow-md">
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">Seguimiento Transparente</h3>
+            <p className="text-gray-600">
+              Recibe un código de seguimiento único para monitorear el estado de tu denuncia sin revelar tu identidad.
+            </p>
+          </div>
+
+          {/* Feature 3 */}
+          <div className="p-6 bg-gray-50 rounded-lg shadow-md">
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">Compromiso con la Integridad</h3>
+            <p className="text-gray-600">
+              Cada denuncia es revisada por un equipo especializado que garantiza una investigación justa y objetiva.
+            </p>
+          </div>
         </div>
-
-        {/* Information Section */}
-        <Card className="bg-white border-2 border-gray-100">
-          <CardContent className="p-8">
-            <h3 className="text-2xl font-semibold text-gray-900 mb-6 text-center">
-              ¿Cómo funciona nuestro sistema?
-            </h3>
-            <div className="grid md:grid-cols-3 gap-6">
-              <div className="text-center">
-                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <span className="text-blue-600 font-bold text-xl">1</span>
-                </div>
-                <h4 className="font-semibold text-gray-900 mb-2">Registro Anónimo</h4>
-                <p className="text-gray-600 text-sm">
-                  Completa el formulario sin revelar tu identidad. Tu email será encriptado.
-                </p>
-              </div>
-              <div className="text-center">
-                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <span className="text-blue-600 font-bold text-xl">2</span>
-                </div>
-                <h4 className="font-semibold text-gray-900 mb-2">Seguimiento</h4>
-                <p className="text-gray-600 text-sm">
-                  Recibe un código único para consultar el estado de tu denuncia en cualquier momento.
-                </p>
-              </div>
-              <div className="text-center">
-                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <span className="text-blue-600 font-bold text-xl">3</span>
-                </div>
-                <h4 className="font-semibold text-gray-900 mb-2">Resolución</h4>
-                <p className="text-gray-600 text-sm">
-                  Nuestro equipo gestiona tu denuncia hasta su resolución completa.
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </main>
+      </section>
 
       {/* Footer */}
-      <footer className="bg-gray-50 border-t mt-16">
-        <div className="max-w-6xl mx-auto px-4 py-8 text-center text-gray-500">
-          <p>© 2024 Canal de Denuncias Empresarial. Todos los derechos reservados.</p>
-          <p className="mt-2 text-sm">Sistema seguro y confidencial para la gestión de denuncias.</p>
+      <footer className="bg-gray-800 text-white py-8 px-4">
+        <div className="max-w-6xl mx-auto text-center">
+          <p className="text-sm">
+            © {new Date().getFullYear()} Canal de Denuncias. Todos los derechos reservados.
+          </p>
+          <p className="text-xs mt-2">
+            Este canal cumple con las normativas de protección de datos y garantiza la confidencialidad de la información.
+          </p>
         </div>
       </footer>
     </div>
