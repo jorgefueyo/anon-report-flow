@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -29,6 +28,7 @@ import {
 } from "@/components/ui/sidebar";
 import { useEmpresa } from "@/hooks/useEmpresa";
 import { useConfiguracionCorreo } from "@/hooks/useConfiguracionCorreo";
+import { useEmailTest } from "@/hooks/useEmailTest";
 import { 
   Building2, 
   FileText, 
@@ -36,7 +36,8 @@ import {
   Users, 
   BarChart3,
   Mail,
-  Save
+  Save,
+  TestTube
 } from "lucide-react";
 
 interface Admin {
@@ -56,10 +57,12 @@ interface CorreoFormData {
 const BackofficeConfiguracionCorreo = () => {
   const [admin, setAdmin] = useState<Admin | null>(null);
   const [saving, setSaving] = useState(false);
+  const [testEmail, setTestEmail] = useState('');
   const navigate = useNavigate();
   const { toast } = useToast();
   const { empresa, loading: empresaLoading } = useEmpresa();
   const { configuracion, loading: configLoading, updateConfiguracion } = useConfiguracionCorreo(empresa?.id);
+  const { testing, testEmailConfiguration } = useEmailTest();
 
   const form = useForm<CorreoFormData>({
     defaultValues: {
@@ -122,6 +125,32 @@ const BackofficeConfiguracionCorreo = () => {
       });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleTestEmail = async () => {
+    if (!testEmail) {
+      toast({
+        title: "Error",
+        description: "Por favor, ingresa un email para la prueba",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const result = await testEmailConfiguration(testEmail);
+    
+    if (result.success) {
+      toast({
+        title: "✅ Prueba exitosa",
+        description: result.message,
+      });
+    } else {
+      toast({
+        title: "Error en la prueba",
+        description: result.message,
+        variant: "destructive",
+      });
     }
   };
 
@@ -338,6 +367,46 @@ const BackofficeConfiguracionCorreo = () => {
                       />
                     </CardContent>
                   </Card>
+
+                  {configuracion && configuracion.activo && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Probar Configuración</CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div>
+                          <FormLabel>Email de prueba</FormLabel>
+                          <div className="flex gap-2 mt-2">
+                            <Input
+                              type="email"
+                              placeholder="test@ejemplo.com"
+                              value={testEmail}
+                              onChange={(e) => setTestEmail(e.target.value)}
+                              className="flex-1"
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={handleTestEmail}
+                              disabled={testing || !testEmail}
+                            >
+                              {testing ? (
+                                "Enviando..."
+                              ) : (
+                                <>
+                                  <TestTube className="w-4 h-4 mr-2" />
+                                  Probar
+                                </>
+                              )}
+                            </Button>
+                          </div>
+                          <FormDescription>
+                            Envía un email de prueba para verificar que la configuración funciona correctamente
+                          </FormDescription>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
 
                   <div className="flex justify-end">
                     <Button type="submit" disabled={saving}>

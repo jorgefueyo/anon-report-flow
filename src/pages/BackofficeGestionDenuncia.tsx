@@ -78,8 +78,10 @@ const BackofficeGestionDenuncia = () => {
       }
 
       try {
+        console.log('Buscando denuncia con ID:', id);
         const denunciaEncontrada = await buscarDenuncia(id);
         if (denunciaEncontrada) {
+          console.log('Denuncia encontrada:', denunciaEncontrada);
           setDenuncia(denunciaEncontrada);
         } else {
           setError('Denuncia no encontrada');
