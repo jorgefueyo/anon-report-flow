@@ -14,22 +14,22 @@ const AppHeader = ({ showButtons = true }: AppHeaderProps) => {
   return (
     <header className="bg-white shadow-sm border-b">
       <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-4">
           {empresa && !loading && empresa.logo_url ? (
             <img 
               src={empresa.logo_url} 
               alt={`Logo de ${empresa.nombre}`}
-              className="w-10 h-10 object-contain"
+              className="w-12 h-12 object-contain"
             />
           ) : (
             <Building2 className="w-8 h-8 text-blue-600" />
           )}
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-4">
             <h1 className="text-xl font-semibold text-gray-900">
               Canal de Denuncias
             </h1>
-            {empresa && !loading && empresa.configurada && (
-              <span className="text-xl font-medium text-gray-700">
+            {empresa && !loading && empresa.configurada && empresa.nombre && (
+              <span className="text-lg font-medium text-gray-700 border-l border-gray-300 pl-4">
                 {empresa.nombre}
               </span>
             )}

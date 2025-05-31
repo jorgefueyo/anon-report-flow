@@ -25,48 +25,44 @@ export const useEmpresa = () => {
     const loadEmpresa = async () => {
       try {
         console.log('Loading empresa data...');
+        // Buscar cualquier empresa configurada primero
         let { data, error } = await supabase
           .from('empresas')
           .select('*')
-          .eq('cif', '12345678A')
-          .single();
+          .eq('configurada', true)
+          .order('updated_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
 
-        if (error && error.code === 'PGRST116') {
-          // No existe la empresa, crearla
-          console.log('Empresa not found, creating demo empresa...');
-          const { data: newEmpresa, error: createError } = await supabase
+        if (error && error.code !== 'PGRST116') {
+          console.error('Error loading empresa:', error);
+          return;
+        }
+
+        // Si no hay empresa configurada, buscar cualquier empresa
+        if (!data) {
+          console.log('No configured empresa found, looking for any empresa...');
+          const { data: anyEmpresa, error: anyError } = await supabase
             .from('empresas')
-            .insert({
-              nombre: 'Empresa Demo',
-              cif: '12345678A',
-              direccion: null,
-              codigo_postal: null,
-              ciudad: null,
-              provincia: null,
-              pais: 'España',
-              email: null,
-              telefono: null,
-              configurada: false,
-              logo_url: null
-            })
-            .select()
-            .single();
+            .select('*')
+            .order('updated_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
 
-          if (createError) {
-            console.error('Error creating empresa:', createError);
+          if (anyError && anyError.code !== 'PGRST116') {
+            console.error('Error loading any empresa:', anyError);
             return;
           }
 
-          data = newEmpresa;
-          console.log('Demo empresa created:', data);
-        } else if (error) {
-          console.error('Error loading empresa:', error);
-          return;
+          data = anyEmpresa;
         }
 
         if (data) {
           console.log('Empresa data loaded:', data);
           setEmpresa(data as Empresa);
+        } else {
+          console.log('No empresa found in database');
+          setEmpresa(null);
         }
       } catch (error) {
         console.error('Error loading empresa:', error);
