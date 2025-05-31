@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -32,7 +33,6 @@ import BackofficeHeader from "@/components/BackofficeHeader";
 import EstadoBadge from "@/components/EstadoBadge";
 import FileUpload from "@/components/FileUpload";
 import { supabase } from "@/integrations/supabase/client";
-import { decryptData } from "@/utils/encryption";
 import { Denuncia, SeguimientoDenuncia, DenunciaArchivo } from "@/types/denuncia";
 import { useAdministradores } from "@/hooks/useAdministradores";
 import { useDenuncias } from "@/hooks/useDenuncias";
@@ -237,6 +237,16 @@ const BackofficeGestionDenuncia = () => {
           operacion = 'Cambio de asignación';
         }
 
+        console.log('Creando seguimiento con datos:', {
+          denuncia_id: denuncia.id,
+          usuario_id: admin.id,
+          estado_anterior: estadoAnterior,
+          estado_nuevo: nuevoEstado,
+          operacion: operacion,
+          acciones_realizadas: accionesRealizadas.trim() || null,
+          observaciones: observaciones.trim() || null,
+        });
+
         const { error: seguimientoError } = await supabase
           .from('seguimiento_denuncias')
           .insert({
@@ -251,6 +261,8 @@ const BackofficeGestionDenuncia = () => {
 
         if (seguimientoError) {
           console.error('Error creando seguimiento:', seguimientoError);
+        } else {
+          console.log('Seguimiento creado exitosamente');
         }
       }
 
@@ -273,15 +285,6 @@ const BackofficeGestionDenuncia = () => {
       });
     } finally {
       setGuardando(false);
-    }
-  };
-
-  const getDataDesencriptada = (dataEncriptada: string | null) => {
-    if (!dataEncriptada) return "No disponible";
-    try {
-      return decryptData(dataEncriptada);
-    } catch {
-      return "Dato no disponible";
     }
   };
 
@@ -360,7 +363,7 @@ const BackofficeGestionDenuncia = () => {
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                {/* Información de la denuncia */}
+                {/* Información de la denuncia - SIN DATOS SENSIBLES */}
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center">
@@ -370,20 +373,11 @@ const BackofficeGestionDenuncia = () => {
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div>
-                      <Label className="font-semibold">Email del denunciante:</Label>
+                      <Label className="font-semibold">Código de seguimiento:</Label>
                       <p className="text-sm text-gray-600">
-                        {getDataDesencriptada(denuncia.email_encriptado)}
+                        {denuncia.codigo_seguimiento}
                       </p>
                     </div>
-                    
-                    {denuncia.nombre_encriptado && (
-                      <div>
-                        <Label className="font-semibold">Nombre:</Label>
-                        <p className="text-sm text-gray-600">
-                          {getDataDesencriptada(denuncia.nombre_encriptado)}
-                        </p>
-                      </div>
-                    )}
 
                     <div>
                       <Label className="font-semibold">Categoría:</Label>
@@ -404,6 +398,13 @@ const BackofficeGestionDenuncia = () => {
                       <p className="text-sm text-gray-600">
                         {new Date(denuncia.created_at).toLocaleString('es-ES')}
                       </p>
+                    </div>
+
+                    <div>
+                      <Label className="font-semibold">Estado:</Label>
+                      <div className="mt-1">
+                        <EstadoBadge estado={denuncia.estado} />
+                      </div>
                     </div>
 
                     <div>
