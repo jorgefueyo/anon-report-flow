@@ -9,6 +9,36 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      administradores: {
+        Row: {
+          activo: boolean | null
+          created_at: string | null
+          email: string
+          id: string
+          nombre: string
+          password_hash: string
+          updated_at: string | null
+        }
+        Insert: {
+          activo?: boolean | null
+          created_at?: string | null
+          email: string
+          id?: string
+          nombre: string
+          password_hash: string
+          updated_at?: string | null
+        }
+        Update: {
+          activo?: boolean | null
+          created_at?: string | null
+          email?: string
+          id?: string
+          nombre?: string
+          password_hash?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       denuncias: {
         Row: {
           asignado_a: string | null
@@ -75,13 +105,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "denuncias_asignado_a_fkey"
-            columns: ["asignado_a"]
-            isOneToOne: false
-            referencedRelation: "usuarios_backoffice"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "denuncias_empresa_id_fkey"
             columns: ["empresa_id"]
             isOneToOne: false
@@ -93,137 +116,38 @@ export type Database = {
       empresas: {
         Row: {
           cif: string
-          color_primario: string | null
-          color_secundario: string | null
+          configurada: boolean | null
           created_at: string
           direccion: string | null
           email: string | null
           id: string
-          logo_url: string | null
           nombre: string
           telefono: string | null
           updated_at: string
         }
         Insert: {
           cif: string
-          color_primario?: string | null
-          color_secundario?: string | null
+          configurada?: boolean | null
           created_at?: string
           direccion?: string | null
           email?: string | null
           id?: string
-          logo_url?: string | null
           nombre: string
           telefono?: string | null
           updated_at?: string
         }
         Update: {
           cif?: string
-          color_primario?: string | null
-          color_secundario?: string | null
+          configurada?: boolean | null
           created_at?: string
           direccion?: string | null
           email?: string | null
           id?: string
-          logo_url?: string | null
           nombre?: string
           telefono?: string | null
           updated_at?: string
         }
         Relationships: []
-      }
-      historial_estados: {
-        Row: {
-          comentario: string | null
-          created_at: string
-          denuncia_id: string | null
-          estado_anterior: Database["public"]["Enums"]["denuncia_estado"] | null
-          estado_nuevo: Database["public"]["Enums"]["denuncia_estado"]
-          id: string
-          usuario_id: string | null
-        }
-        Insert: {
-          comentario?: string | null
-          created_at?: string
-          denuncia_id?: string | null
-          estado_anterior?:
-            | Database["public"]["Enums"]["denuncia_estado"]
-            | null
-          estado_nuevo: Database["public"]["Enums"]["denuncia_estado"]
-          id?: string
-          usuario_id?: string | null
-        }
-        Update: {
-          comentario?: string | null
-          created_at?: string
-          denuncia_id?: string | null
-          estado_anterior?:
-            | Database["public"]["Enums"]["denuncia_estado"]
-            | null
-          estado_nuevo?: Database["public"]["Enums"]["denuncia_estado"]
-          id?: string
-          usuario_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "historial_estados_denuncia_id_fkey"
-            columns: ["denuncia_id"]
-            isOneToOne: false
-            referencedRelation: "denuncias"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "historial_estados_usuario_id_fkey"
-            columns: ["usuario_id"]
-            isOneToOne: false
-            referencedRelation: "usuarios_backoffice"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      usuarios_backoffice: {
-        Row: {
-          activo: boolean | null
-          auth_user_id: string | null
-          created_at: string
-          email: string
-          empresa_id: string | null
-          id: string
-          nombre: string
-          rol: Database["public"]["Enums"]["user_role"]
-          updated_at: string
-        }
-        Insert: {
-          activo?: boolean | null
-          auth_user_id?: string | null
-          created_at?: string
-          email: string
-          empresa_id?: string | null
-          id?: string
-          nombre: string
-          rol?: Database["public"]["Enums"]["user_role"]
-          updated_at?: string
-        }
-        Update: {
-          activo?: boolean | null
-          auth_user_id?: string | null
-          created_at?: string
-          email?: string
-          empresa_id?: string | null
-          id?: string
-          nombre?: string
-          rol?: Database["public"]["Enums"]["user_role"]
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "usuarios_backoffice_empresa_id_fkey"
-            columns: ["empresa_id"]
-            isOneToOne: false
-            referencedRelation: "empresas"
-            referencedColumns: ["id"]
-          },
-        ]
       }
     }
     Views: {
@@ -240,8 +164,7 @@ export type Database = {
       }
     }
     Enums: {
-      denuncia_estado: "pendiente" | "asignada" | "en_tramite" | "finalizada"
-      user_role: "admin" | "supervisor" | "viewer"
+      denuncia_estado: "pendiente" | "en_proceso" | "finalizada"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -357,8 +280,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      denuncia_estado: ["pendiente", "asignada", "en_tramite", "finalizada"],
-      user_role: ["admin", "supervisor", "viewer"],
+      denuncia_estado: ["pendiente", "en_proceso", "finalizada"],
     },
   },
 } as const

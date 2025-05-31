@@ -4,13 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { supabase } from "@/hooks/useSupabase";
+import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { LogIn, Building2 } from "lucide-react";
 import AppHeader from "@/components/AppHeader";
 
-const Login = () => {
+const BackofficeLogin = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -22,46 +22,35 @@ const Login = () => {
     setLoading(true);
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      // Verificar credenciales en la tabla administradores
+      const { data: admin, error } = await supabase
+        .from('administradores')
+        .select('*')
+        .eq('email', email)
+        .eq('password_hash', password) // Por simplicidad, sin hash por ahora
+        .eq('activo', true)
+        .single();
 
-      if (error) {
+      if (error || !admin) {
         toast({
           title: "Error de acceso",
-          description: error.message,
+          description: "Credenciales incorrectas",
           variant: "destructive",
         });
         return;
       }
 
-      if (data.user) {
-        // Verificar si el usuario tiene acceso al backoffice
-        const { data: usuario, error: userError } = await supabase
-          .from('usuarios_backoffice')
-          .select('*')
-          .eq('auth_user_id', data.user.id)
-          .eq('activo', true)
-          .single();
+      // Guardar admin en localStorage para la sesión
+      localStorage.setItem('backoffice_admin', JSON.stringify(admin));
 
-        if (userError || !usuario) {
-          toast({
-            title: "Acceso denegado",
-            description: "No tienes permisos para acceder al backoffice",
-            variant: "destructive",
-          });
-          await supabase.auth.signOut();
-          return;
-        }
-
-        toast({
-          title: "Acceso exitoso",
-          description: `Bienvenido ${usuario.nombre}`,
-        });
-        navigate('/backoffice');
-      }
+      toast({
+        title: "Acceso exitoso",
+        description: `Bienvenido ${admin.nombre}`,
+      });
+      
+      navigate('/backoffice');
     } catch (error) {
+      console.error('Error de login:', error);
       toast({
         title: "Error",
         description: "Error inesperado al iniciar sesión",
@@ -82,7 +71,7 @@ const Login = () => {
               <Building2 className="w-6 h-6 text-white" />
             </div>
             <CardTitle className="text-2xl font-bold text-gray-900">
-              Acceso al Backoffice
+              Backoffice - Acceso
             </CardTitle>
             <p className="text-gray-600 mt-2">
               Ingresa tus credenciales para continuar
@@ -97,7 +86,7 @@ const Login = () => {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="tu@empresa.com"
+                  placeholder="info@zerotek.es"
                   required
                   className="mt-1"
                 />
@@ -109,7 +98,7 @@ const Login = () => {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
+                  placeholder="admin1234"
                   required
                   className="mt-1"
                 />
@@ -125,6 +114,13 @@ const Login = () => {
                 )}
               </Button>
             </form>
+            
+            <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+              <h4 className="text-sm font-semibold text-blue-900 mb-2">Credenciales por defecto:</h4>
+              <p className="text-sm text-blue-700">Email: info@zerotek.es</p>
+              <p className="text-sm text-blue-700">Contraseña: admin1234</p>
+            </div>
+            
             <div className="mt-6 text-center">
               <Button 
                 variant="link" 
@@ -141,4 +137,4 @@ const Login = () => {
   );
 };
 
-export default Login;
+export default BackofficeLogin;
