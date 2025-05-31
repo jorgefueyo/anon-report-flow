@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -33,10 +32,9 @@ export const useDenuncias = () => {
 
       const empresa = empresas[0];
 
-      // Preparar datos para inserción con codigo_seguimiento temporal
+      // Preparar datos para inserción
       const datosInsercion = {
         empresa_id: empresa.id,
-        codigo_seguimiento: 'TEMP-' + Date.now(), // Temporal, será reemplazado por el trigger
         email_encriptado: encryptData(datos.email),
         nombre_encriptado: datos.nombre ? encryptData(datos.nombre) : null,
         telefono_encriptado: datos.telefono ? encryptData(datos.telefono) : null,
@@ -48,6 +46,7 @@ export const useDenuncias = () => {
         lugar_hechos: datos.lugar_hechos || null,
         testigos: datos.testigos || null,
         personas_implicadas: datos.personas_implicadas || null,
+        estado: 'pendiente'
       };
 
       console.log('Datos para inserción:', datosInsercion);
@@ -71,15 +70,6 @@ export const useDenuncias = () => {
       }
 
       console.log('Denuncia creada exitosamente:', denuncia);
-
-      // Subir archivos si existen (comentado temporalmente hasta que se arregle el storage)
-      // if (datos.archivos && datos.archivos.length > 0) {
-      //   console.log('Subiendo archivos:', datos.archivos.length);
-      //   await subirArchivos(denuncia.id, datos.archivos);
-      // }
-
-      // NO enviar notificación por email para evitar el error del schema "net"
-      // Se puede implementar más tarde cuando se configure correctamente
 
       toast({
         title: "Denuncia creada exitosamente",
@@ -109,10 +99,16 @@ export const useDenuncias = () => {
     try {
       console.log('Actualizando estado de denuncia:', { denunciaId, nuevoEstado, observaciones });
 
+      // Mapear estados para que coincidan con los válidos en la base de datos
+      let estadoValido = nuevoEstado;
+      if (nuevoEstado === 'en_tramite') {
+        estadoValido = 'en_proceso';
+      }
+
       const { error } = await supabase
         .from('denuncias')
         .update({ 
-          estado: nuevoEstado,
+          estado: estadoValido,
           observaciones_internas: observaciones,
           updated_at: new Date().toISOString()
         })
@@ -128,9 +124,9 @@ export const useDenuncias = () => {
         .from('seguimiento_denuncias')
         .insert({
           denuncia_id: denunciaId,
-          estado_nuevo: nuevoEstado,
+          estado_nuevo: estadoValido,
           operacion: 'Cambio de estado',
-          acciones_realizadas: `Estado cambiado a ${nuevoEstado}`,
+          acciones_realizadas: `Estado cambiado a ${estadoValido}`,
           observaciones: observaciones
         });
 
@@ -141,7 +137,7 @@ export const useDenuncias = () => {
 
       toast({
         title: "Estado actualizado",
-        description: `La denuncia ha sido actualizada a: ${nuevoEstado}`,
+        description: `La denuncia ha sido actualizada a: ${estadoValido}`,
       });
 
       return true;

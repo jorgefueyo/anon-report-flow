@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -120,33 +119,31 @@ const BackofficeGestionDenuncia = () => {
   }
 
   const DenunciaCard = ({ denuncia }: { denuncia: Denuncia }) => (
-    <div className="lg:col-span-2">
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            Denuncia #{denuncia.codigo_seguimiento}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <Label>Estado</Label>
-            <Input type="text" value={denuncia.estado} disabled />
-          </div>
-          <div>
-            <Label>Relación con la empresa</Label>
-            <Input type="text" value={denuncia.relacion_empresa || 'No especificado'} disabled />
-          </div>
-          <div>
-            <Label>Categoría</Label>
-            <Input type="text" value={denuncia.categoria || 'No especificada'} disabled />
-          </div>
-          <div>
-            <Label>Hechos</Label>
-            <Textarea value={denuncia.hechos} disabled />
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+    <Card>
+      <CardHeader>
+        <CardTitle>
+          Denuncia #{denuncia.codigo_seguimiento}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div>
+          <Label>Estado</Label>
+          <Input type="text" value={denuncia.estado} disabled />
+        </div>
+        <div>
+          <Label>Relación con la empresa</Label>
+          <Input type="text" value={denuncia.relacion_empresa || 'No especificado'} disabled />
+        </div>
+        <div>
+          <Label>Categoría</Label>
+          <Input type="text" value={denuncia.categoria || 'No especificada'} disabled />
+        </div>
+        <div>
+          <Label>Hechos</Label>
+          <Textarea value={denuncia.hechos} disabled />
+        </div>
+      </CardContent>
+    </Card>
   );
 
   return (
@@ -255,16 +252,18 @@ const BackofficeGestionDenuncia = () => {
               )}
 
               {denuncia && !loading && !error && (
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="space-y-6">
+                  {/* Información de la denuncia */}
                   <DenunciaCard denuncia={denuncia} />
 
-                  <div className="lg:col-span-1 space-y-6">
-                    <GestionarDenuncia 
-                      denuncia={denuncia} 
-                      onDenunciaActualizada={handleDenunciaActualizada}
-                    />
-                    <HistorialSeguimiento denunciaId={denuncia.id} />
-                  </div>
+                  {/* Gestionar denuncia */}
+                  <GestionarDenuncia 
+                    denuncia={denuncia} 
+                    onDenunciaActualizada={handleDenunciaActualizada}
+                  />
+
+                  {/* Historial de seguimiento */}
+                  <HistorialSeguimiento denunciaId={denuncia.id} />
                 </div>
               )}
             </div>

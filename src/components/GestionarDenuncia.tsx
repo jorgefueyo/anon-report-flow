@@ -24,12 +24,18 @@ const GestionarDenuncia = ({ denuncia, onDenunciaActualizada }: GestionarDenunci
       return; // No hay cambios
     }
 
-    const exito = await actualizarEstadoDenuncia(denuncia.id, nuevoEstado, observaciones);
+    // Mapear estado de la UI al estado de la base de datos
+    let estadoParaDB = nuevoEstado;
+    if (nuevoEstado === 'en_tramite') {
+      estadoParaDB = 'en_proceso';
+    }
+
+    const exito = await actualizarEstadoDenuncia(denuncia.id, estadoParaDB, observaciones);
     if (exito) {
       // Actualizar la denuncia local
       const denunciaActualizada = {
         ...denuncia,
-        estado: nuevoEstado,
+        estado: estadoParaDB,
         observaciones_internas: observaciones,
         updated_at: new Date().toISOString()
       };
@@ -43,6 +49,7 @@ const GestionarDenuncia = ({ denuncia, onDenunciaActualizada }: GestionarDenunci
         return <Clock className="w-4 h-4 text-yellow-600" />;
       case 'asignada':
         return <User className="w-4 h-4 text-blue-600" />;
+      case 'en_proceso':
       case 'en_tramite':
         return <AlertCircle className="w-4 h-4 text-orange-600" />;
       case 'finalizada':
@@ -58,12 +65,30 @@ const GestionarDenuncia = ({ denuncia, onDenunciaActualizada }: GestionarDenunci
         return 'bg-yellow-100 text-yellow-800';
       case 'asignada':
         return 'bg-blue-100 text-blue-800';
+      case 'en_proceso':
       case 'en_tramite':
         return 'bg-orange-100 text-orange-800';
       case 'finalizada':
         return 'bg-green-100 text-green-800';
       default:
         return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getEstadoLabel = (estado: string) => {
+    switch (estado) {
+      case 'pendiente':
+        return 'PENDIENTE';
+      case 'asignada':
+        return 'ASIGNADA';
+      case 'en_proceso':
+        return 'EN TRÁMITE';
+      case 'en_tramite':
+        return 'EN TRÁMITE';
+      case 'finalizada':
+        return 'FINALIZADA';
+      default:
+        return estado.toUpperCase();
     }
   };
 
@@ -79,7 +104,7 @@ const GestionarDenuncia = ({ denuncia, onDenunciaActualizada }: GestionarDenunci
         <div>
           <Label htmlFor="estado-actual">Estado actual</Label>
           <div className={`inline-flex items-center px-2 py-1 rounded-full text-sm font-medium ${getEstadoColor(denuncia.estado)}`}>
-            {denuncia.estado.toUpperCase()}
+            {getEstadoLabel(denuncia.estado)}
           </div>
         </div>
 
@@ -92,7 +117,7 @@ const GestionarDenuncia = ({ denuncia, onDenunciaActualizada }: GestionarDenunci
             <SelectContent>
               <SelectItem value="pendiente">Pendiente</SelectItem>
               <SelectItem value="asignada">Asignada</SelectItem>
-              <SelectItem value="en_tramite">En trámite</SelectItem>
+              <SelectItem value="en_proceso">En trámite</SelectItem>
               <SelectItem value="finalizada">Finalizada</SelectItem>
             </SelectContent>
           </Select>
