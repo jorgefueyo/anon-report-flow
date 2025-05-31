@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -20,6 +21,7 @@ import {
 } from "@/components/ui/sidebar";
 import { useEmpresa } from "@/hooks/useEmpresa";
 import { useDenuncias } from "@/hooks/useDenuncias";
+import { Denuncia } from "@/types/denuncia";
 import {
   Building2,
   FileText,
@@ -37,27 +39,6 @@ interface Admin {
   id: string;
   email: string;
   nombre: string;
-}
-
-interface Denuncia {
-  id: string;
-  codigo_seguimiento: string;
-  email_encriptado: string;
-  nombre_encriptado: string | null;
-  telefono_encriptado: string | null;
-  domicilio_encriptado: string | null;
-  relacion_empresa: string | null;
-  categoria: string | null;
-  hechos: string;
-  fecha_hechos: string | null;
-  lugar_hechos: string | null;
-  testigos: string | null;
-  personas_implicadas: string | null;
-  estado: string;
-  asignado_a: string | null;
-  observaciones_internas: string | null;
-  created_at: string;
-  updated_at: string;
 }
 
 const BackofficeGestionDenuncia = () => {
