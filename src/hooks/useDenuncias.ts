@@ -32,9 +32,10 @@ export const useDenuncias = () => {
 
       const empresa_id = empresas[0].id;
 
-      // Preparar datos para inserción - omitiendo codigo_seguimiento ya que se genera automáticamente
+      // Preparar datos para inserción - usando un codigo_seguimiento temporal que será reemplazado por el trigger
       const datosInsercion = {
         empresa_id,
+        codigo_seguimiento: 'TEMP-' + Date.now(), // Temporal, será reemplazado por el trigger
         email_encriptado: encryptData(datos.email),
         nombre_encriptado: datos.nombre ? encryptData(datos.nombre) : null,
         telefono_encriptado: datos.telefono ? encryptData(datos.telefono) : null,
@@ -50,7 +51,7 @@ export const useDenuncias = () => {
 
       console.log('Datos para inserción:', datosInsercion);
 
-      // Crear la denuncia - el codigo_seguimiento se genera automáticamente
+      // Crear la denuncia - el trigger reemplazará el codigo_seguimiento temporal
       const { data: denuncia, error: denunciaError } = await supabase
         .from('denuncias')
         .insert(datosInsercion)
