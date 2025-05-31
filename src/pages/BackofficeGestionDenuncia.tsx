@@ -7,7 +7,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   SidebarProvider,
   SidebarInset,
@@ -29,10 +28,8 @@ import {
   Users,
   BarChart3,
   Mail,
-  ArrowLeft,
-  Save
+  ArrowLeft
 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import HistorialSeguimiento from "@/components/HistorialSeguimiento";
 
 interface Admin {
@@ -78,11 +75,12 @@ const BackofficeGestionDenuncia = () => {
       }
 
       try {
-        console.log('Buscando denuncia con ID:', id);
+        console.log('Buscando denuncia con código:', id);
         const denunciaEncontrada = await buscarDenuncia(id);
         if (denunciaEncontrada) {
           console.log('Denuncia encontrada:', denunciaEncontrada);
           setDenuncia(denunciaEncontrada);
+          setError(null);
         } else {
           setError('Denuncia no encontrada');
         }
@@ -94,8 +92,10 @@ const BackofficeGestionDenuncia = () => {
       }
     };
 
-    cargarDenuncia();
-  }, [id, buscarDenuncia]);
+    if (admin) {
+      cargarDenuncia();
+    }
+  }, [id, buscarDenuncia, admin]);
 
   const handleLogout = () => {
     localStorage.removeItem('backoffice_admin');
@@ -243,13 +243,13 @@ const BackofficeGestionDenuncia = () => {
                 </div>
               )}
 
-              {error && (
+              {error && !loading && (
                 <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-6">
                   {error}
                 </div>
               )}
 
-              {denuncia && !loading && (
+              {denuncia && !loading && !error && (
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   <DenunciaCard denuncia={denuncia} />
 

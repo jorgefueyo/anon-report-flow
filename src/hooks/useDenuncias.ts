@@ -35,10 +35,9 @@ export const useDenuncias = () => {
 
       const empresa = empresas[0];
 
-      // Preparar datos para inserción - usando un codigo_seguimiento temporal que será reemplazado por el trigger
+      // Preparar datos para inserción
       const datosInsercion = {
         empresa_id: empresa.id,
-        codigo_seguimiento: 'TEMP-' + Date.now(),
         email_encriptado: encryptData(datos.email),
         nombre_encriptado: datos.nombre ? encryptData(datos.nombre) : null,
         telefono_encriptado: datos.telefono ? encryptData(datos.telefono) : null,
@@ -54,7 +53,7 @@ export const useDenuncias = () => {
 
       console.log('Datos para inserción:', datosInsercion);
 
-      // Crear la denuncia - el trigger reemplazará el codigo_seguimiento temporal
+      // Crear la denuncia
       const { data: denuncia, error: denunciaError } = await supabase
         .from('denuncias')
         .insert(datosInsercion)
@@ -74,13 +73,13 @@ export const useDenuncias = () => {
 
       console.log('Denuncia creada exitosamente:', denuncia);
 
-      // Subir archivos si existen
-      if (datos.archivos && datos.archivos.length > 0) {
-        console.log('Subiendo archivos:', datos.archivos.length);
-        await subirArchivos(denuncia.id, datos.archivos);
-      }
+      // Subir archivos si existen (comentado temporalmente hasta que se arregle el storage)
+      // if (datos.archivos && datos.archivos.length > 0) {
+      //   console.log('Subiendo archivos:', datos.archivos.length);
+      //   await subirArchivos(denuncia.id, datos.archivos);
+      // }
 
-      // Enviar notificación por email al denunciante (esto se hace automáticamente con los triggers)
+      // Enviar notificación por email solo si hay configuración
       try {
         await sendNewDenunciaNotification(
           datos.email,
@@ -170,11 +169,21 @@ export const useDenuncias = () => {
         .from('denuncias')
         .select('*')
         .eq('codigo_seguimiento', codigo.trim())
-        .single();
+        .maybeSingle();
 
       console.log('Resultado búsqueda:', { data, error });
 
-      if (error || !data) {
+      if (error) {
+        console.error('Error en la consulta:', error);
+        toast({
+          title: "Error",
+          description: "Error al buscar la denuncia",
+          variant: "destructive",
+        });
+        return null;
+      }
+
+      if (!data) {
         toast({
           title: "No encontrado",
           description: "No se encontró ninguna denuncia con ese código",
