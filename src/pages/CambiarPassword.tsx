@@ -13,6 +13,8 @@ interface Admin {
   id: string;
   email: string;
   nombre: string;
+  primer_login?: boolean;
+  requiere_cambio_password?: boolean;
 }
 
 const CambiarPassword = () => {
@@ -41,6 +43,8 @@ const CambiarPassword = () => {
     }
   }, [navigate]);
 
+  const isPrimerLogin = admin?.primer_login || admin?.requiere_cambio_password;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -66,30 +70,44 @@ const CambiarPassword = () => {
 
     setLoading(true);
     try {
-      // Verificar contraseña actual
-      const { data: adminData, error: verifyError } = await supabase
-        .from('administradores')
-        .select('*')
-        .eq('id', admin.id)
-        .eq('password_hash', currentPassword)
-        .single();
+      // Si no es primer login, verificar contraseña actual
+      if (!isPrimerLogin) {
+        const { data: adminData, error: verifyError } = await supabase
+          .from('administradores')
+          .select('*')
+          .eq('id', admin.id)
+          .eq('password_hash', currentPassword)
+          .single();
 
-      if (verifyError || !adminData) {
-        toast({
-          title: "Error",
-          description: "La contraseña actual es incorrecta",
-          variant: "destructive",
-        });
-        return;
+        if (verifyError || !adminData) {
+          toast({
+            title: "Error",
+            description: "La contraseña actual es incorrecta",
+            variant: "destructive",
+          });
+          return;
+        }
       }
 
-      // Actualizar contraseña
+      // Actualizar contraseña y marcar que ya no es primer login
       const { error: updateError } = await supabase
         .from('administradores')
-        .update({ password_hash: newPassword })
+        .update({ 
+          password_hash: newPassword,
+          primer_login: false,
+          requiere_cambio_password: false
+        })
         .eq('id', admin.id);
 
       if (updateError) throw updateError;
+
+      // Actualizar localStorage
+      const updatedAdmin = { 
+        ...admin, 
+        primer_login: false, 
+        requiere_cambio_password: false 
+      };
+      localStorage.setItem('backoffice_admin', JSON.stringify(updatedAdmin));
 
       toast({
         title: "Contraseña actualizada",
@@ -134,25 +152,30 @@ const CambiarPassword = () => {
             <KeyRound className="w-6 h-6 text-white" />
           </div>
           <CardTitle className="text-2xl font-bold text-gray-900">
-            Cambiar Contraseña
+            {isPrimerLogin ? "Configurar Contraseña" : "Cambiar Contraseña"}
           </CardTitle>
           <p className="text-gray-600 mt-2">
-            Hola {admin.nombre}, cambia tu contraseña por seguridad
+            {isPrimerLogin 
+              ? `Hola ${admin.nombre}, por seguridad debes cambiar tu contraseña inicial`
+              : `Hola ${admin.nombre}, cambia tu contraseña por seguridad`
+            }
           </p>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <Label htmlFor="current">Contraseña Actual</Label>
-              <Input
-                id="current"
-                type="password"
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                required
-                className="mt-1"
-              />
-            </div>
+            {!isPrimerLogin && (
+              <div>
+                <Label htmlFor="current">Contraseña Actual</Label>
+                <Input
+                  id="current"
+                  type="password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  required
+                  className="mt-1"
+                />
+              </div>
+            )}
             
             <div>
               <Label htmlFor="new">Nueva Contraseña</Label>
@@ -186,21 +209,23 @@ const CambiarPassword = () => {
               ) : (
                 <>
                   <Save className="w-4 h-4 mr-2" />
-                  Cambiar Contraseña
+                  {isPrimerLogin ? "Establecer Contraseña" : "Cambiar Contraseña"}
                 </>
               )}
             </Button>
           </form>
           
-          <div className="mt-6 text-center">
-            <Button 
-              variant="link" 
-              onClick={() => navigate('/backoffice')}
-              className="text-blue-600"
-            >
-              ← Volver al Dashboard
-            </Button>
-          </div>
+          {!isPrimerLogin && (
+            <div className="mt-6 text-center">
+              <Button 
+                variant="link" 
+                onClick={() => navigate('/backoffice')}
+                className="text-blue-600"
+              >
+                ← Volver al Dashboard
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

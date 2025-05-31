@@ -76,10 +76,31 @@ const BackofficeEmpresa = () => {
       const { data, error } = await supabase
         .from('empresas')
         .select('*')
-        .limit(1)
+        .eq('cif', '12345678A')
         .single();
 
-      if (data) {
+      if (error) {
+        console.error('Error loading empresa:', error);
+        // Si no existe la empresa, crear una nueva
+        const { data: newEmpresa, error: createError } = await supabase
+          .from('empresas')
+          .insert({
+            nombre: 'Mi Empresa',
+            cif: '12345678A',
+            direccion: '',
+            email: '',
+            telefono: '',
+            configurada: false
+          })
+          .select()
+          .single();
+
+        if (createError) {
+          console.error('Error creating empresa:', createError);
+        } else {
+          setEmpresa(newEmpresa);
+        }
+      } else {
         setEmpresa(data);
       }
     } catch (error) {
@@ -113,6 +134,9 @@ const BackofficeEmpresa = () => {
         title: "Datos guardados",
         description: "La configuración de la empresa se ha actualizado correctamente",
       });
+      
+      // Actualizar el estado local
+      setEmpresa({...empresa, configurada: true});
     } catch (error) {
       console.error('Error saving empresa:', error);
       toast({

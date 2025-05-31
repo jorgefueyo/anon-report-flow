@@ -22,7 +22,7 @@ export const useEmpresa = () => {
         const { data } = await supabase
           .from('empresas')
           .select('id, nombre, cif, direccion, email, telefono, configurada')
-          .eq('cif', '00000000A')
+          .eq('cif', '12345678A')
           .single();
 
         if (data) {
@@ -38,5 +38,11 @@ export const useEmpresa = () => {
     loadEmpresa();
   }, []);
 
-  return { empresa, loading };
+  const updateEmpresa = (updatedData: Partial<Empresa>) => {
+    if (empresa) {
+      setEmpresa({ ...empresa, ...updatedData });
+    }
+  };
+
+  return { empresa, loading, updateEmpresa };
 };

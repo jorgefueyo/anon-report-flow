@@ -11,8 +11,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Shield, Send } from "lucide-react";
 import { encryptData } from "@/utils/encryption";
+import { useEmpresa } from "@/hooks/useEmpresa";
+import TerminosUso from "@/components/TerminosUso";
+import CanalesExternos from "@/components/CanalesExternos";
 
 const NuevaDenuncia = () => {
+  const { empresa, loading: empresaLoading } = useEmpresa();
   const [formData, setFormData] = useState({
     email: "",
     nombre: "",
@@ -27,6 +31,10 @@ const NuevaDenuncia = () => {
     personasImplicadas: "",
     anonimo: false
   });
+  const [aceptaTerminos, setAceptaTerminos] = useState(false);
+  const [aceptaCanalesExternos, setAceptaCanalesExternos] = useState(false);
+  const [showTerminos, setShowTerminos] = useState(false);
+  const [showCanalesExternos, setShowCanalesExternos] = useState(false);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
@@ -44,14 +52,25 @@ const NuevaDenuncia = () => {
         return;
       }
 
-      // Obtener la empresa demo
-      const { data: empresa, error: empresaError } = await supabase
-        .from('empresas')
-        .select('*')
-        .eq('cif', '12345678A')
-        .single();
+      if (!aceptaTerminos) {
+        toast({
+          title: "Términos requeridos",
+          description: "Debe aceptar los términos de uso",
+          variant: "destructive",
+        });
+        return;
+      }
 
-      if (empresaError || !empresa) {
+      if (!aceptaCanalesExternos) {
+        toast({
+          title: "Información requerida",
+          description: "Debe confirmar que ha leído la información sobre canales externos",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (!empresa) {
         toast({
           title: "Error",
           description: "No se pudo encontrar la empresa. Contacte al administrador.",
@@ -112,6 +131,8 @@ const NuevaDenuncia = () => {
         personasImplicadas: "",
         anonimo: false
       });
+      setAceptaTerminos(false);
+      setAceptaCanalesExternos(false);
 
     } catch (error) {
       console.error('Error:', error);
@@ -125,6 +146,16 @@ const NuevaDenuncia = () => {
     }
   };
 
+  if (empresaLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  const nombreEmpresa = empresa?.nombre || "La Empresa";
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100 flex items-center justify-center p-4">
       <Card className="w-full max-w-2xl shadow-xl">
@@ -135,6 +166,9 @@ const NuevaDenuncia = () => {
           <CardTitle className="text-2xl font-bold text-gray-900">
             Canal de Denuncias
           </CardTitle>
+          {empresa && empresa.configurada && (
+            <p className="text-gray-600 mt-2">{empresa.nombre}</p>
+          )}
           <p className="text-gray-600 mt-2">
             Su denuncia será tratada de forma confidencial y anónima
           </p>
@@ -305,7 +339,60 @@ const NuevaDenuncia = () => {
               </div>
             </div>
 
-            <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700" disabled={loading}>
+            {/* Checkboxes legales */}
+            <div className="space-y-4 border-t pt-6">
+              <h3 className="text-lg font-semibold text-gray-900">Aceptación de términos</h3>
+              
+              <div className="flex items-start space-x-2">
+                <Checkbox 
+                  id="terminos"
+                  checked={aceptaTerminos}
+                  onCheckedChange={(checked) => setAceptaTerminos(checked as boolean)}
+                  className="mt-1"
+                />
+                <div className="flex-1">
+                  <Label htmlFor="terminos" className="text-sm">
+                    He leído y acepto los{" "}
+                    <button
+                      type="button"
+                      onClick={() => setShowTerminos(true)}
+                      className="text-blue-600 underline hover:text-blue-800"
+                    >
+                      términos de uso del canal de denuncias
+                    </button>
+                    {" "}de {nombreEmpresa} *
+                  </Label>
+                </div>
+              </div>
+
+              <div className="flex items-start space-x-2">
+                <Checkbox 
+                  id="canalesExternos"
+                  checked={aceptaCanalesExternos}
+                  onCheckedChange={(checked) => setAceptaCanalesExternos(checked as boolean)}
+                  className="mt-1"
+                />
+                <div className="flex-1">
+                  <Label htmlFor="canalesExternos" className="text-sm">
+                    He sido informado sobre la existencia de{" "}
+                    <button
+                      type="button"
+                      onClick={() => setShowCanalesExternos(true)}
+                      className="text-blue-600 underline hover:text-blue-800"
+                    >
+                      canales de denuncia externos
+                    </button>
+                    {" "}independientes al de {nombreEmpresa} *
+                  </Label>
+                </div>
+              </div>
+            </div>
+
+            <Button 
+              type="submit" 
+              className="w-full bg-blue-600 hover:bg-blue-700" 
+              disabled={loading || !aceptaTerminos || !aceptaCanalesExternos}
+            >
               {loading ? (
                 "Enviando denuncia..."
               ) : (
@@ -328,6 +415,18 @@ const NuevaDenuncia = () => {
           </div>
         </CardContent>
       </Card>
+
+      <TerminosUso 
+        open={showTerminos} 
+        onOpenChange={setShowTerminos}
+        nombreEmpresa={nombreEmpresa}
+      />
+      
+      <CanalesExternos 
+        open={showCanalesExternos} 
+        onOpenChange={setShowCanalesExternos}
+        nombreEmpresa={nombreEmpresa}
+      />
     </div>
   );
 };

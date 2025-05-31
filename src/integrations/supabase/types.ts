@@ -17,6 +17,8 @@ export type Database = {
           id: string
           nombre: string
           password_hash: string
+          primer_login: boolean | null
+          requiere_cambio_password: boolean | null
           updated_at: string | null
         }
         Insert: {
@@ -26,6 +28,8 @@ export type Database = {
           id?: string
           nombre: string
           password_hash: string
+          primer_login?: boolean | null
+          requiere_cambio_password?: boolean | null
           updated_at?: string | null
         }
         Update: {
@@ -35,6 +39,8 @@ export type Database = {
           id?: string
           nombre?: string
           password_hash?: string
+          primer_login?: boolean | null
+          requiere_cambio_password?: boolean | null
           updated_at?: string | null
         }
         Relationships: []

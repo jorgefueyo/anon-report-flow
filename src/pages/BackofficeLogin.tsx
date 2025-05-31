@@ -27,7 +27,7 @@ const BackofficeLogin = () => {
         .from('administradores')
         .select('*')
         .eq('email', email)
-        .eq('password_hash', password) // Por simplicidad, sin hash por ahora
+        .eq('password_hash', password)
         .eq('activo', true)
         .single();
 
@@ -48,7 +48,12 @@ const BackofficeLogin = () => {
         description: `Bienvenido ${admin.nombre}`,
       });
       
-      navigate('/backoffice');
+      // Si es primer login o requiere cambio de contraseña, redirigir a cambiar contraseña
+      if (admin.primer_login || admin.requiere_cambio_password) {
+        navigate('/backoffice/cambiar-password');
+      } else {
+        navigate('/backoffice');
+      }
     } catch (error) {
       console.error('Error de login:', error);
       toast({
