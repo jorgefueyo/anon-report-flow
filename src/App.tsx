@@ -9,6 +9,8 @@ import NuevaDenuncia from "./pages/NuevaDenuncia";
 import ConsultarDenuncia from "./pages/ConsultarDenuncia";
 import BackofficeLogin from "./pages/BackofficeLogin";
 import BackofficeDashboard from "./pages/BackofficeDashboard";
+import BackofficeDenuncias from "./pages/BackofficeDenuncias";
+import BackofficeGestionDenuncia from "./pages/BackofficeGestionDenuncia";
 import BackofficeEmpresa from "./pages/BackofficeEmpresa";
 import BackofficeConfiguracionCorreo from "./pages/BackofficeConfiguracionCorreo";
 import BackofficeAdmin from "./pages/BackofficeAdmin";
@@ -29,6 +31,8 @@ const App = () => (
           <Route path="/consultar" element={<ConsultarDenuncia />} />
           <Route path="/backoffice/login" element={<BackofficeLogin />} />
           <Route path="/backoffice" element={<BackofficeDashboard />} />
+          <Route path="/backoffice/denuncias" element={<BackofficeDenuncias />} />
+          <Route path="/backoffice/denuncias/:id" element={<BackofficeGestionDenuncia />} />
           <Route path="/backoffice/empresa" element={<BackofficeEmpresa />} />
           <Route path="/backoffice/configuracion-correo" element={<BackofficeConfiguracionCorreo />} />
           <Route path="/backoffice/admin" element={<BackofficeAdmin />} />

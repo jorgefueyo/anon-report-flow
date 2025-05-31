@@ -33,7 +33,7 @@ export const useDenuncias = () => {
 
       const empresa_id = empresas[0].id;
 
-      // Preparar datos para inserción - NO incluir codigo_seguimiento ya que se genera automáticamente
+      // Preparar datos para inserción - codigo_seguimiento se genera automáticamente en la BD
       const datosInsercion = {
         empresa_id,
         email_encriptado: encryptData(datos.email),
@@ -51,7 +51,7 @@ export const useDenuncias = () => {
 
       console.log('Datos para inserción:', datosInsercion);
 
-      // Crear la denuncia
+      // Crear la denuncia - el codigo_seguimiento se genera automáticamente
       const { data: denuncia, error: denunciaError } = await supabase
         .from('denuncias')
         .insert(datosInsercion)

@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -14,14 +14,59 @@ const BackofficeLogin = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [checkingSession, setCheckingSession] = useState(true);
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  useEffect(() => {
+    // Verificar si ya hay una sesión activa
+    const adminData = localStorage.getItem('backoffice_admin');
+    if (adminData) {
+      try {
+        const parsedAdmin = JSON.parse(adminData);
+        console.log('Sesión activa encontrada:', parsedAdmin.email);
+        
+        // Verificar que el admin sigue siendo válido
+        supabase
+          .from('administradores')
+          .select('*')
+          .eq('id', parsedAdmin.id)
+          .eq('activo', true)
+          .single()
+          .then(({ data, error }) => {
+            if (data && !error) {
+              console.log('Sesión válida, redirigiendo...');
+              // Si es primer login o requiere cambio de contraseña, redirigir apropiadamente
+              if (data.primer_login || data.requiere_cambio_password) {
+                navigate('/backoffice/cambiar-password');
+              } else {
+                navigate('/backoffice');
+              }
+            } else {
+              console.log('Sesión inválida, limpiando...');
+              localStorage.removeItem('backoffice_admin');
+            }
+          })
+          .finally(() => {
+            setCheckingSession(false);
+          });
+      } catch (error) {
+        console.error('Error verificando sesión:', error);
+        localStorage.removeItem('backoffice_admin');
+        setCheckingSession(false);
+      }
+    } else {
+      setCheckingSession(false);
+    }
+  }, [navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
+      console.log('Intentando login con:', email);
+
       // Verificar credenciales en la tabla administradores
       const { data: admin, error } = await supabase
         .from('administradores')
@@ -32,6 +77,7 @@ const BackofficeLogin = () => {
         .single();
 
       if (error || !admin) {
+        console.error('Error de login:', error);
         toast({
           title: "Error de acceso",
           description: "Credenciales incorrectas",
@@ -40,8 +86,15 @@ const BackofficeLogin = () => {
         return;
       }
 
-      // Guardar admin en localStorage para la sesión
-      localStorage.setItem('backoffice_admin', JSON.stringify(admin));
+      console.log('Login exitoso:', admin.email);
+
+      // Guardar admin en localStorage para la sesión con timestamp
+      const adminSessionData = {
+        ...admin,
+        sessionTimestamp: Date.now()
+      };
+      
+      localStorage.setItem('backoffice_admin', JSON.stringify(adminSessionData));
 
       toast({
         title: "Acceso exitoso",
@@ -65,6 +118,15 @@ const BackofficeLogin = () => {
       setLoading(false);
     }
   };
+
+  // Mostrar loading mientras verifica la sesión
+  if (checkingSession) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100">
