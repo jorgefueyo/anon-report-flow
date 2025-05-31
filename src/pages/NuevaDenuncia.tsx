@@ -1,10 +1,10 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, ArrowRight, FileText, User, Users, MapPin } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -21,6 +21,8 @@ const NuevaDenuncia = () => {
     hechos: "",
     fecha: "",
     lugar: "",
+    relacionEmpresa: "",
+    categoria: "",
     
     // Testigos
     testigos: "",
@@ -33,6 +35,30 @@ const NuevaDenuncia = () => {
   });
 
   const totalSteps = 4;
+
+  const categoriasDenuncia = [
+    "Irregularidades contables o financieras",
+    "Corrupción, soborno o conflicto de intereses",
+    "Fraude o malversación de fondos",
+    "Discriminación o acoso laboral",
+    "Incumplimiento de normativas de seguridad y salud",
+    "Violación de políticas internas",
+    "Uso indebido de recursos de la empresa",
+    "Irregularidades en procesos de contratación",
+    "Incumplimiento de normativas medioambientales",
+    "Violación de la protección de datos",
+    "Otras irregularidades éticas o legales"
+  ];
+
+  const relacionesEmpresa = [
+    "Empleado/a",
+    "Ex-empleado/a",
+    "Cliente",
+    "Proveedor",
+    "Contratista",
+    "Visitante",
+    "Tercero/Otro"
+  ];
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -198,6 +224,41 @@ const NuevaDenuncia = () => {
                     required
                   />
                 </div>
+                
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div>
+                    <Label htmlFor="relacionEmpresa">Relación con la Empresa</Label>
+                    <Select value={formData.relacionEmpresa} onValueChange={(value) => handleInputChange("relacionEmpresa", value)}>
+                      <SelectTrigger className="mt-2">
+                        <SelectValue placeholder="Selecciona tu relación con la empresa" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {relacionesEmpresa.map((relacion) => (
+                          <SelectItem key={relacion} value={relacion}>
+                            {relacion}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="categoria">Categoría de la Denuncia</Label>
+                    <Select value={formData.categoria} onValueChange={(value) => handleInputChange("categoria", value)}>
+                      <SelectTrigger className="mt-2">
+                        <SelectValue placeholder="Selecciona la categoría" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categoriasDenuncia.map((categoria) => (
+                          <SelectItem key={categoria} value={categoria}>
+                            {categoria}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                
                 <div className="grid md:grid-cols-2 gap-6">
                   <div>
                     <Label htmlFor="fecha">Fecha de los Hechos</Label>
@@ -267,6 +328,12 @@ const NuevaDenuncia = () => {
                   <div className="grid gap-4">
                     <div>
                       <strong>Email:</strong> {formData.email || "No proporcionado"}
+                    </div>
+                    <div>
+                      <strong>Relación con la empresa:</strong> {formData.relacionEmpresa || "No proporcionada"}
+                    </div>
+                    <div>
+                      <strong>Categoría:</strong> {formData.categoria || "No proporcionada"}
                     </div>
                     <div>
                       <strong>Hechos:</strong> {formData.hechos || "No proporcionado"}
