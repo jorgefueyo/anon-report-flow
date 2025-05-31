@@ -47,7 +47,7 @@ const BackofficeGestionDenuncia = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { empresa, loading: empresaLoading } = useEmpresa();
-  const { buscarDenuncia } = useDenuncias();
+  const { buscarDenunciaPorId } = useDenuncias();
 
   useEffect(() => {
     // Verificar si hay admin logueado
@@ -75,8 +75,8 @@ const BackofficeGestionDenuncia = () => {
       }
 
       try {
-        console.log('Buscando denuncia con código:', id);
-        const denunciaEncontrada = await buscarDenuncia(id);
+        console.log('Buscando denuncia con ID:', id);
+        const denunciaEncontrada = await buscarDenunciaPorId(id);
         if (denunciaEncontrada) {
           console.log('Denuncia encontrada:', denunciaEncontrada);
           setDenuncia(denunciaEncontrada);
@@ -95,7 +95,7 @@ const BackofficeGestionDenuncia = () => {
     if (admin) {
       cargarDenuncia();
     }
-  }, [id, buscarDenuncia, admin]);
+  }, [id, buscarDenunciaPorId, admin]);
 
   const handleLogout = () => {
     localStorage.removeItem('backoffice_admin');

@@ -35,9 +35,10 @@ export const useDenuncias = () => {
 
       const empresa = empresas[0];
 
-      // Preparar datos para inserción
+      // Preparar datos para inserción con codigo_seguimiento temporal
       const datosInsercion = {
         empresa_id: empresa.id,
+        codigo_seguimiento: 'TEMP-' + Date.now(), // Temporal, será reemplazado por el trigger
         email_encriptado: encryptData(datos.email),
         nombre_encriptado: datos.nombre ? encryptData(datos.nombre) : null,
         telefono_encriptado: datos.telefono ? encryptData(datos.telefono) : null,
@@ -206,6 +207,33 @@ export const useDenuncias = () => {
     }
   };
 
+  const buscarDenunciaPorId = async (id: string): Promise<Denuncia | null> => {
+    setLoading(true);
+    try {
+      console.log('Buscando denuncia con ID:', id);
+      
+      const { data, error } = await supabase
+        .from('denuncias')
+        .select('*')
+        .eq('id', id)
+        .maybeSingle();
+
+      console.log('Resultado búsqueda por ID:', { data, error });
+
+      if (error) {
+        console.error('Error en la consulta:', error);
+        return null;
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error buscando denuncia por ID:', error);
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const obtenerArchivosDenuncia = async (denunciaId: string): Promise<DenunciaArchivo[]> => {
     try {
       console.log('Obteniendo archivos para denuncia:', denunciaId);
@@ -233,6 +261,7 @@ export const useDenuncias = () => {
     loading,
     crearDenuncia,
     buscarDenuncia,
+    buscarDenunciaPorId,
     obtenerArchivosDenuncia,
   };
 };
