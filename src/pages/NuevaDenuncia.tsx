@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
@@ -55,8 +54,19 @@ const NuevaDenuncia = () => {
   });
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    // Asegurarnos de que el email está presente ya que es requerido
     const datos: FormularioDenuncia = {
-      ...values,
+      email: values.email, // Este campo es requerido en el tipo
+      nombre: values.nombre,
+      telefono: values.telefono,
+      domicilio: values.domicilio,
+      relacion_empresa: values.relacion_empresa,
+      categoria: values.categoria,
+      hechos: values.hechos,
+      fecha_hechos: values.fecha_hechos,
+      lugar_hechos: values.lugar_hechos,
+      testigos: values.testigos,
+      personas_implicadas: values.personas_implicadas,
       archivos,
     };
 

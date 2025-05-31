@@ -24,7 +24,7 @@ export const useDenuncias = () => {
 
       const empresa_id = empresas[0].id;
 
-      // Crear la denuncia
+      // Crear la denuncia - NO incluir codigo_seguimiento ya que se genera automáticamente
       const { data: denuncia, error: denunciaError } = await supabase
         .from('denuncias')
         .insert({
