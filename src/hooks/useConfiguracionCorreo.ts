@@ -24,17 +24,19 @@ export const useConfiguracionCorreo = (empresaId?: string) => {
 
     const loadConfiguracion = async () => {
       try {
+        console.log('Loading configuracion correo for empresa_id:', empresaId);
         const { data, error } = await supabase
           .from('configuracion_correo')
           .select('*')
           .eq('empresa_id', empresaId)
-          .single();
+          .maybeSingle();
 
-        if (error && error.code !== 'PGRST116') {
+        if (error) {
           console.error('Error loading configuracion correo:', error);
           return;
         }
 
+        console.log('Configuracion correo loaded:', data);
         setConfiguracion(data);
       } catch (error) {
         console.error('Error loading configuracion correo:', error);
@@ -50,8 +52,11 @@ export const useConfiguracionCorreo = (empresaId?: string) => {
     if (!empresaId) return { success: false, error: 'No hay empresa seleccionada' };
 
     try {
+      console.log('Updating configuracion correo:', updatedData);
+      
       if (configuracion) {
         // Actualizar configuración existente
+        console.log('Updating existing configuration with id:', configuracion.id);
         const { data, error } = await supabase
           .from('configuracion_correo')
           .update(updatedData)
@@ -59,10 +64,15 @@ export const useConfiguracionCorreo = (empresaId?: string) => {
           .select()
           .single();
 
-        if (error) throw error;
+        if (error) {
+          console.error('Error updating configuracion:', error);
+          throw error;
+        }
+        console.log('Configuration updated successfully:', data);
         setConfiguracion(data);
       } else {
         // Crear nueva configuración
+        console.log('Creating new configuration for empresa_id:', empresaId);
         const { data, error } = await supabase
           .from('configuracion_correo')
           .insert({
@@ -72,14 +82,21 @@ export const useConfiguracionCorreo = (empresaId?: string) => {
           .select()
           .single();
 
-        if (error) throw error;
+        if (error) {
+          console.error('Error creating configuracion:', error);
+          throw error;
+        }
+        console.log('Configuration created successfully:', data);
         setConfiguracion(data);
       }
 
       return { success: true };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating configuracion correo:', error);
-      return { success: false, error: 'Error al actualizar la configuración de correo' };
+      return { 
+        success: false, 
+        error: error.message || 'Error al actualizar la configuración de correo' 
+      };
     }
   };
 
