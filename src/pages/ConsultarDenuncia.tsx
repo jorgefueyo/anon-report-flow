@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Search, Eye, FileText } from "lucide-react";
+import { Search, Eye, FileText, Clock } from "lucide-react";
 import AppHeader from "@/components/AppHeader";
 
 interface Denuncia {
@@ -19,9 +19,19 @@ interface Denuncia {
   updated_at: string;
 }
 
+interface SeguimientoDenuncia {
+  id: string;
+  estado_anterior: string | null;
+  estado_nuevo: string;
+  operacion: string;
+  acciones_realizadas: string | null;
+  created_at: string;
+}
+
 const ConsultarDenuncia = () => {
   const [codigoSeguimiento, setCodigoSeguimiento] = useState("");
   const [denuncia, setDenuncia] = useState<Denuncia | null>(null);
+  const [seguimientos, setSeguimientos] = useState<SeguimientoDenuncia[]>([]);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
@@ -50,10 +60,26 @@ const ConsultarDenuncia = () => {
           variant: "destructive",
         });
         setDenuncia(null);
+        setSeguimientos([]);
         return;
       }
 
       setDenuncia(data);
+
+      // Cargar el historial de seguimiento
+      const { data: seguimientosData, error: seguimientosError } = await supabase
+        .from('seguimiento_denuncias')
+        .select('id, estado_anterior, estado_nuevo, operacion, acciones_realizadas, created_at')
+        .eq('denuncia_id', data.id)
+        .order('created_at', { ascending: false });
+
+      if (seguimientosError) {
+        console.error('Error cargando seguimientos:', seguimientosError);
+        setSeguimientos([]);
+      } else {
+        setSeguimientos(seguimientosData || []);
+      }
+
       toast({
         title: "Denuncia encontrada",
         description: "Se encontró la denuncia correspondiente",
@@ -86,11 +112,20 @@ const ConsultarDenuncia = () => {
     );
   };
 
+  const getEstadoTexto = (estado: string) => {
+    const estados = {
+      'pendiente': 'Pendiente',
+      'en_proceso': 'En Proceso',
+      'finalizada': 'Finalizada'
+    };
+    return estados[estado as keyof typeof estados] || estado;
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100">
       <AppHeader />
 
-      <div className="max-w-2xl mx-auto p-6 mt-8">
+      <div className="max-w-4xl mx-auto p-6 mt-8">
         <Card className="shadow-xl">
           <CardHeader className="text-center">
             <div className="mx-auto w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center mb-4">
@@ -128,45 +163,93 @@ const ConsultarDenuncia = () => {
             </div>
 
             {denuncia && (
-              <Card className="bg-gray-50">
-                <CardHeader>
-                  <CardTitle className="flex items-center text-lg">
-                    <FileText className="w-5 h-5 mr-2" />
-                    Información de la Denuncia
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label className="text-sm font-medium text-gray-600">Código</Label>
-                      <p className="font-semibold">{denuncia.codigo_seguimiento}</p>
-                    </div>
-                    <div>
-                      <Label className="text-sm font-medium text-gray-600">Estado</Label>
-                      <div className="mt-1">
-                        {getEstadoBadge(denuncia.estado)}
+              <div className="space-y-6">
+                <Card className="bg-gray-50">
+                  <CardHeader>
+                    <CardTitle className="flex items-center text-lg">
+                      <FileText className="w-5 h-5 mr-2" />
+                      Información de la Denuncia
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label className="text-sm font-medium text-gray-600">Código</Label>
+                        <p className="font-semibold">{denuncia.codigo_seguimiento}</p>
+                      </div>
+                      <div>
+                        <Label className="text-sm font-medium text-gray-600">Estado</Label>
+                        <div className="mt-1">
+                          {getEstadoBadge(denuncia.estado)}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  
-                  {denuncia.categoria && (
+                    
+                    {denuncia.categoria && (
+                      <div>
+                        <Label className="text-sm font-medium text-gray-600">Categoría</Label>
+                        <p>{denuncia.categoria}</p>
+                      </div>
+                    )}
+                    
                     <div>
-                      <Label className="text-sm font-medium text-gray-600">Categoría</Label>
-                      <p>{denuncia.categoria}</p>
+                      <Label className="text-sm font-medium text-gray-600">Fecha de Creación</Label>
+                      <p>{new Date(denuncia.created_at).toLocaleDateString('es-ES')}</p>
                     </div>
-                  )}
-                  
-                  <div>
-                    <Label className="text-sm font-medium text-gray-600">Fecha de Creación</Label>
-                    <p>{new Date(denuncia.created_at).toLocaleDateString('es-ES')}</p>
-                  </div>
-                  
-                  <div>
-                    <Label className="text-sm font-medium text-gray-600">Última Actualización</Label>
-                    <p>{new Date(denuncia.updated_at).toLocaleDateString('es-ES')}</p>
-                  </div>
-                </CardContent>
-              </Card>
+                    
+                    <div>
+                      <Label className="text-sm font-medium text-gray-600">Última Actualización</Label>
+                      <p>{new Date(denuncia.updated_at).toLocaleDateString('es-ES')}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Historial de seguimiento */}
+                <Card className="bg-gray-50">
+                  <CardHeader>
+                    <CardTitle className="flex items-center text-lg">
+                      <Clock className="w-5 h-5 mr-2" />
+                      Historial de Seguimiento
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {seguimientos.length === 0 ? (
+                      <p className="text-gray-500 text-center py-4">
+                        No hay registros de seguimiento disponibles
+                      </p>
+                    ) : (
+                      <div className="space-y-4">
+                        {seguimientos.map((seguimiento) => (
+                          <div key={seguimiento.id} className="border-l-4 border-blue-500 pl-4 py-3 bg-white rounded-r-lg">
+                            <div className="flex justify-between items-start mb-2">
+                              <div>
+                                <Badge variant="outline" className="mb-1">
+                                  {seguimiento.operacion}
+                                </Badge>
+                                {seguimiento.estado_anterior && seguimiento.estado_nuevo && (
+                                  <p className="text-sm text-gray-600">
+                                    Estado: {getEstadoTexto(seguimiento.estado_anterior)} → {getEstadoTexto(seguimiento.estado_nuevo)}
+                                  </p>
+                                )}
+                              </div>
+                              <span className="text-xs text-gray-500">
+                                {new Date(seguimiento.created_at).toLocaleString('es-ES')}
+                              </span>
+                            </div>
+                            
+                            {seguimiento.acciones_realizadas && (
+                              <div>
+                                <Label className="text-xs font-semibold">Acciones realizadas:</Label>
+                                <p className="text-sm text-gray-700">{seguimiento.acciones_realizadas}</p>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
             )}
             
             <div className="text-center">
