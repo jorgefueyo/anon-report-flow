@@ -28,8 +28,9 @@ const FileUpload = ({ files, onFilesChange, maxFiles = 5, acceptedTypes }: FileU
     accept: acceptedTypes ? acceptedTypes.reduce((acc, type) => ({ ...acc, [type]: [] }), {}) : {
       'image/*': [],
       'application/pdf': [],
-      '.doc,.docx': [],
-      '.txt': []
+      'application/msword': [],
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': [],
+      'text/plain': []
     },
     maxFiles: maxFiles - files.length,
     disabled: files.length >= maxFiles

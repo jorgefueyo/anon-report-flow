@@ -31,7 +31,7 @@ export type Database = {
         Insert: {
           id?: string;
           empresa_id?: string | null;
-          codigo_seguimiento?: string;
+          codigo_seguimiento?: string; // Opcional porque se genera automáticamente
           email_encriptado: string;
           nombre_encriptado?: string | null;
           telefono_encriptado?: string | null;
