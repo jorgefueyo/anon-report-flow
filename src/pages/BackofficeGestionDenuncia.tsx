@@ -196,6 +196,7 @@ const BackofficeGestionDenuncia = () => {
     try {
       setGuardando(true);
       console.log('Iniciando actualización de denuncia...');
+      console.log('ID de la denuncia:', denuncia.id);
       console.log('Estado actual:', denuncia.estado);
       console.log('Nuevo estado:', nuevoEstado);
       console.log('Administrador actual:', denuncia.asignado_a);
@@ -221,13 +222,12 @@ const BackofficeGestionDenuncia = () => {
 
       console.log('Datos para actualizar:', updateData);
 
-      // ACTUALIZAR LA DENUNCIA EN LA BASE DE DATOS
+      // ACTUALIZAR LA DENUNCIA EN LA BASE DE DATOS - SIN .single()
       const { data: updatedDenuncia, error: updateError } = await supabase
         .from('denuncias')
         .update(updateData)
         .eq('id', denuncia.id)
-        .select()
-        .single();
+        .select();
 
       if (updateError) {
         console.error('Error actualizando denuncia:', updateError);
@@ -239,7 +239,7 @@ const BackofficeGestionDenuncia = () => {
         return;
       }
 
-      if (!updatedDenuncia) {
+      if (!updatedDenuncia || updatedDenuncia.length === 0) {
         console.error('No se recibieron datos de la denuncia actualizada');
         toast({
           title: "Error",
@@ -249,10 +249,11 @@ const BackofficeGestionDenuncia = () => {
         return;
       }
 
-      console.log('Denuncia actualizada exitosamente:', updatedDenuncia);
+      const denunciaActualizada = updatedDenuncia[0];
+      console.log('Denuncia actualizada exitosamente:', denunciaActualizada);
 
       // Actualizar el estado local inmediatamente
-      setDenuncia(updatedDenuncia);
+      setDenuncia(denunciaActualizada);
 
       // Subir nuevos archivos si existen
       if (nuevosArchivos.length > 0) {
