@@ -25,13 +25,41 @@ export const useEmpresa = () => {
     const loadEmpresa = async () => {
       try {
         console.log('Loading empresa data...');
-        const { data, error } = await supabase
+        let { data, error } = await supabase
           .from('empresas')
           .select('*')
           .eq('cif', '12345678A')
           .single();
 
-        if (error) {
+        if (error && error.code === 'PGRST116') {
+          // No existe la empresa, crearla
+          console.log('Empresa not found, creating demo empresa...');
+          const { data: newEmpresa, error: createError } = await supabase
+            .from('empresas')
+            .insert({
+              nombre: 'Empresa Demo',
+              cif: '12345678A',
+              direccion: null,
+              codigo_postal: null,
+              ciudad: null,
+              provincia: null,
+              pais: 'España',
+              email: null,
+              telefono: null,
+              configurada: false,
+              logo_url: null
+            })
+            .select()
+            .single();
+
+          if (createError) {
+            console.error('Error creating empresa:', createError);
+            return;
+          }
+
+          data = newEmpresa;
+          console.log('Demo empresa created:', data);
+        } else if (error) {
           console.error('Error loading empresa:', error);
           return;
         }
@@ -100,7 +128,7 @@ export const useEmpresa = () => {
   const updateEmpresa = async (updatedData: Partial<Empresa>, logoFile?: File) => {
     if (!empresa) {
       console.error('No empresa loaded for update');
-      return { success: false, error: 'No hay empresa cargada' };
+      return { success: false, error: 'No hay empresa cargada para actualizar' };
     }
 
     console.log('Updating empresa with data:', updatedData);
@@ -140,7 +168,7 @@ export const useEmpresa = () => {
 
       if (error) {
         console.error('Database update error:', error);
-        throw error;
+        return { success: false, error: `Error de base de datos: ${error.message}` };
       }
 
       console.log('Updated empresa data:', data);
