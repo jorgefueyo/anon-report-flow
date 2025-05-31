@@ -19,7 +19,7 @@ const AppHeader = ({ showButtons = true }: AppHeaderProps) => {
             <img 
               src={empresa.logo_url} 
               alt={`Logo de ${empresa.nombre}`}
-              className="w-12 h-12 object-contain"
+              className="w-10 h-5 object-contain"
             />
           ) : (
             <Building2 className="w-8 h-8 text-blue-600" />
