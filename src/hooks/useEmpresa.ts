@@ -42,9 +42,26 @@ export const useEmpresa = () => {
     loadEmpresa();
   }, []);
 
-  const updateEmpresa = (updatedData: Partial<Empresa>) => {
-    if (empresa) {
-      setEmpresa({ ...empresa, ...updatedData });
+  const updateEmpresa = async (updatedData: Partial<Empresa>) => {
+    if (!empresa) return false;
+
+    try {
+      const { error } = await supabase
+        .from('empresas')
+        .update({
+          ...updatedData,
+          configurada: true
+        })
+        .eq('id', empresa.id);
+
+      if (error) throw error;
+
+      // Actualizar el estado local
+      setEmpresa({ ...empresa, ...updatedData, configurada: true });
+      return true;
+    } catch (error) {
+      console.error('Error updating empresa:', error);
+      return false;
     }
   };
 

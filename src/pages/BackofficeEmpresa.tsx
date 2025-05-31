@@ -6,6 +6,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useForm } from "react-hook-form";
+import { 
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { 
   SidebarProvider,
   SidebarInset,
@@ -17,7 +26,7 @@ import {
   SidebarMenuButton,
   SidebarTrigger
 } from "@/components/ui/sidebar";
-import { supabase } from "@/integrations/supabase/client";
+import { useEmpresa } from "@/hooks/useEmpresa";
 import { 
   Building2, 
   FileText, 
@@ -34,39 +43,39 @@ interface Admin {
   nombre: string;
 }
 
-interface Empresa {
-  id: string;
+interface EmpresaFormData {
   nombre: string;
   cif: string;
-  direccion: string | null;
-  codigo_postal: string | null;
-  ciudad: string | null;
-  provincia: string | null;
-  pais: string | null;
-  email: string | null;
-  telefono: string | null;
-  configurada: boolean | null;
+  direccion: string;
+  codigo_postal: string;
+  ciudad: string;
+  provincia: string;
+  pais: string;
+  email: string;
+  telefono: string;
 }
 
 const BackofficeEmpresa = () => {
   const [admin, setAdmin] = useState<Admin | null>(null);
-  const [empresa, setEmpresa] = useState<Empresa>({
-    id: '',
-    nombre: '',
-    cif: '',
-    direccion: '',
-    codigo_postal: '',
-    ciudad: '',
-    provincia: '',
-    pais: 'España',
-    email: '',
-    telefono: '',
-    configurada: false
-  });
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { empresa, loading, updateEmpresa } = useEmpresa();
+
+  const form = useForm<EmpresaFormData>({
+    defaultValues: {
+      nombre: '',
+      cif: '',
+      direccion: '',
+      codigo_postal: '',
+      ciudad: '',
+      provincia: '',
+      pais: 'España',
+      email: '',
+      telefono: '',
+    }
+  });
 
   useEffect(() => {
     // Verificar si hay admin logueado
@@ -79,112 +88,80 @@ const BackofficeEmpresa = () => {
     try {
       const parsedAdmin = JSON.parse(adminData);
       setAdmin(parsedAdmin);
-      loadEmpresa();
     } catch (error) {
       console.error('Error parsing admin data:', error);
       navigate('/backoffice/login');
     }
   }, [navigate]);
 
-  const loadEmpresa = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('empresas')
-        .select('*')
-        .eq('cif', '12345678A')
-        .single();
+  useEffect(() => {
+    if (empresa) {
+      form.reset({
+        nombre: empresa.nombre || '',
+        cif: empresa.cif || '',
+        direccion: empresa.direccion || '',
+        codigo_postal: empresa.codigo_postal || '',
+        ciudad: empresa.ciudad || '',
+        provincia: empresa.provincia || '',
+        pais: empresa.pais || 'España',
+        email: empresa.email || '',
+        telefono: empresa.telefono || '',
+      });
+    }
+  }, [empresa, form]);
 
-      if (error && error.code !== 'PGRST116') {
-        console.error('Error loading empresa:', error);
-      } else if (data) {
-        setEmpresa({
-          id: data.id,
-          nombre: data.nombre || '',
-          cif: data.cif || '',
-          direccion: data.direccion || '',
-          codigo_postal: data.codigo_postal || '',
-          ciudad: data.ciudad || '',
-          provincia: data.provincia || '',
-          pais: data.pais || 'España',
-          email: data.email || '',
-          telefono: data.telefono || '',
-          configurada: data.configurada || false
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      
+      // Validar tipo de archivo
+      if (!file.type.startsWith('image/')) {
+        toast({
+          title: "Error",
+          description: "Por favor selecciona un archivo de imagen válido",
+          variant: "destructive",
         });
-      } else {
-        // Si no existe la empresa, crear una nueva
-        const { data: newEmpresa, error: createError } = await supabase
-          .from('empresas')
-          .insert({
-            nombre: 'Mi Empresa',
-            cif: '12345678A',
-            direccion: '',
-            codigo_postal: '',
-            ciudad: '',
-            provincia: '',
-            pais: 'España',
-            email: '',
-            telefono: '',
-            configurada: false
-          })
-          .select()
-          .single();
-
-        if (createError) {
-          console.error('Error creating empresa:', createError);
-        } else if (newEmpresa) {
-          setEmpresa({
-            id: newEmpresa.id,
-            nombre: newEmpresa.nombre,
-            cif: newEmpresa.cif,
-            direccion: newEmpresa.direccion || '',
-            codigo_postal: newEmpresa.codigo_postal || '',
-            ciudad: newEmpresa.ciudad || '',
-            provincia: newEmpresa.provincia || '',
-            pais: newEmpresa.pais || 'España',
-            email: newEmpresa.email || '',
-            telefono: newEmpresa.telefono || '',
-            configurada: newEmpresa.configurada || false
-          });
-        }
+        return;
       }
-    } catch (error) {
-      console.error('Error loading empresa:', error);
-    } finally {
-      setLoading(false);
+      
+      // Validar tamaño (max 2MB)
+      if (file.size > 2 * 1024 * 1024) {
+        toast({
+          title: "Error",
+          description: "El archivo es demasiado grande. Máximo 2MB",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      setLogoFile(file);
     }
   };
 
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!empresa.id) return;
+  const onSubmit = async (data: EmpresaFormData) => {
+    if (!empresa) return;
 
     setSaving(true);
     try {
-      const { error } = await supabase
-        .from('empresas')
-        .update({
-          nombre: empresa.nombre,
-          cif: empresa.cif,
-          direccion: empresa.direccion,
-          codigo_postal: empresa.codigo_postal,
-          ciudad: empresa.ciudad,
-          provincia: empresa.provincia,
-          pais: empresa.pais,
-          email: empresa.email,
-          telefono: empresa.telefono,
-          configurada: true
-        })
-        .eq('id', empresa.id);
-
-      if (error) throw error;
-
-      toast({
-        title: "Datos guardados",
-        description: "La configuración de la empresa se ha actualizado correctamente",
-      });
+      const success = await updateEmpresa(data);
       
-      // Actualizar el estado local
-      setEmpresa({...empresa, configurada: true});
+      if (success) {
+        toast({
+          title: "Datos guardados",
+          description: "La configuración de la empresa se ha actualizado correctamente",
+        });
+        
+        // TODO: Implementar subida de logo cuando esté configurado Storage
+        if (logoFile) {
+          console.log('Logo file ready for upload:', logoFile.name);
+          toast({
+            title: "Logo preparado",
+            description: "El logo se subirá cuando esté configurado el almacenamiento",
+          });
+        }
+      } else {
+        throw new Error('Error al actualizar los datos');
+      }
     } catch (error) {
       console.error('Error saving empresa:', error);
       toast({
@@ -291,148 +268,198 @@ const BackofficeEmpresa = () => {
                 Configuración de Empresa
               </h1>
               
-              <form onSubmit={handleSave} className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Datos Básicos</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="nombre">Nombre de la Empresa *</Label>
-                        <Input
-                          id="nombre"
-                          value={empresa.nombre}
-                          onChange={(e) => setEmpresa({...empresa, nombre: e.target.value})}
-                          required
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Datos Básicos</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="nombre"
+                          rules={{ required: "El nombre es obligatorio" }}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Nombre de la Empresa *</FormLabel>
+                              <FormControl>
+                                <Input {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="cif"
+                          rules={{ required: "El CIF es obligatorio" }}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>CIF/NIF *</FormLabel>
+                              <FormControl>
+                                <Input {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
                         />
                       </div>
-                      <div>
-                        <Label htmlFor="cif">CIF/NIF *</Label>
-                        <Input
-                          id="cif"
-                          value={empresa.cif}
-                          onChange={(e) => setEmpresa({...empresa, cif: e.target.value})}
-                          required
-                        />
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <Label htmlFor="direccion">Dirección *</Label>
-                      <Input
-                        id="direccion"
-                        value={empresa.direccion || ''}
-                        onChange={(e) => setEmpresa({...empresa, direccion: e.target.value})}
-                        placeholder="Calle, número, etc."
-                        required
+                      
+                      <FormField
+                        control={form.control}
+                        name="direccion"
+                        rules={{ required: "La dirección es obligatoria" }}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Dirección *</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="Calle, número, etc." />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
                       />
-                    </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div>
-                        <Label htmlFor="codigo_postal">Código Postal *</Label>
-                        <Input
-                          id="codigo_postal"
-                          value={empresa.codigo_postal || ''}
-                          onChange={(e) => setEmpresa({...empresa, codigo_postal: e.target.value})}
-                          placeholder="28001"
-                          required
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="codigo_postal"
+                          rules={{ required: "El código postal es obligatorio" }}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Código Postal *</FormLabel>
+                              <FormControl>
+                                <Input {...field} placeholder="28001" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="ciudad"
+                          rules={{ required: "La ciudad es obligatoria" }}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Ciudad *</FormLabel>
+                              <FormControl>
+                                <Input {...field} placeholder="Madrid" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="provincia"
+                          rules={{ required: "La provincia es obligatoria" }}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Provincia *</FormLabel>
+                              <FormControl>
+                                <Input {...field} placeholder="Madrid" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
                         />
                       </div>
-                      <div>
-                        <Label htmlFor="ciudad">Ciudad *</Label>
-                        <Input
-                          id="ciudad"
-                          value={empresa.ciudad || ''}
-                          onChange={(e) => setEmpresa({...empresa, ciudad: e.target.value})}
-                          placeholder="Madrid"
-                          required
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="provincia">Provincia *</Label>
-                        <Input
-                          id="provincia"
-                          value={empresa.provincia || ''}
-                          onChange={(e) => setEmpresa({...empresa, provincia: e.target.value})}
-                          placeholder="Madrid"
-                          required
-                        />
-                      </div>
-                    </div>
 
-                    <div>
-                      <Label htmlFor="pais">País *</Label>
-                      <Input
-                        id="pais"
-                        value={empresa.pais || ''}
-                        onChange={(e) => setEmpresa({...empresa, pais: e.target.value})}
-                        placeholder="España"
-                        required
+                      <FormField
+                        control={form.control}
+                        name="pais"
+                        rules={{ required: "El país es obligatorio" }}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>País *</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="España" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
                       />
-                    </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="email">Email de Contacto</Label>
-                        <Input
-                          id="email"
-                          type="email"
-                          value={empresa.email || ''}
-                          onChange={(e) => setEmpresa({...empresa, email: e.target.value})}
-                          placeholder="contacto@empresa.com"
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="email"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Email de Contacto</FormLabel>
+                              <FormControl>
+                                <Input {...field} type="email" placeholder="contacto@empresa.com" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="telefono"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Teléfono de Contacto</FormLabel>
+                              <FormControl>
+                                <Input {...field} placeholder="+34 123 456 789" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
                         />
                       </div>
-                      <div>
-                        <Label htmlFor="telefono">Teléfono de Contacto</Label>
-                        <Input
-                          id="telefono"
-                          value={empresa.telefono || ''}
-                          onChange={(e) => setEmpresa({...empresa, telefono: e.target.value})}
-                          placeholder="+34 123 456 789"
-                        />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
 
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Logo de la Empresa</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      <p className="text-sm text-gray-600">
-                        Sube el logo de tu empresa (formato JPG o PNG, tamaño máximo 400x400px)
-                      </p>
-                      <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                        <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                        <p className="text-gray-500 mb-2">Arrastra y suelta tu logo aquí</p>
-                        <Button type="button" variant="outline">
-                          Seleccionar archivo
-                        </Button>
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Logo de la Empresa</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        <p className="text-sm text-gray-600">
+                          Sube el logo de tu empresa (formato JPG o PNG, tamaño máximo 2MB)
+                        </p>
+                        <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                          <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                          <p className="text-gray-500 mb-2">
+                            {logoFile ? `Archivo seleccionado: ${logoFile.name}` : 'Arrastra y suelta tu logo aquí'}
+                          </p>
+                          <Input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleFileChange}
+                            className="hidden"
+                            id="logo-upload"
+                          />
+                          <Label htmlFor="logo-upload">
+                            <Button type="button" variant="outline" className="cursor-pointer">
+                              Seleccionar archivo
+                            </Button>
+                          </Label>
+                        </div>
+                        <p className="text-xs text-gray-500">
+                          * El logo aparecerá en la página principal del canal de denuncias
+                        </p>
                       </div>
-                      <p className="text-xs text-gray-500">
-                        * El logo aparecerá en la página principal del canal de denuncias
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
 
-                <div className="flex justify-end">
-                  <Button type="submit" disabled={saving}>
-                    {saving ? (
-                      "Guardando..."
-                    ) : (
-                      <>
-                        <Save className="w-4 h-4 mr-2" />
-                        Guardar Configuración
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </form>
+                  <div className="flex justify-end">
+                    <Button type="submit" disabled={saving}>
+                      {saving ? (
+                        "Guardando..."
+                      ) : (
+                        <>
+                          <Save className="w-4 h-4 mr-2" />
+                          Guardar Configuración
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </form>
+              </Form>
             </div>
           </div>
         </SidebarInset>
