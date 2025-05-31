@@ -8,6 +8,7 @@ import { supabase } from "@/hooks/useSupabase";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { LogIn, Building2 } from "lucide-react";
+import AppHeader from "@/components/AppHeader";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -72,67 +73,70 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md shadow-xl">
-        <CardHeader className="text-center">
-          <div className="mx-auto w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center mb-4">
-            <Building2 className="w-6 h-6 text-white" />
-          </div>
-          <CardTitle className="text-2xl font-bold text-gray-900">
-            Acceso al Backoffice
-          </CardTitle>
-          <p className="text-gray-600 mt-2">
-            Ingresa tus credenciales para continuar
-          </p>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div>
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="tu@empresa.com"
-                required
-                className="mt-1"
-              />
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100">
+      <AppHeader showButtons={false} />
+      <div className="flex items-center justify-center p-4 mt-20">
+        <Card className="w-full max-w-md shadow-xl">
+          <CardHeader className="text-center">
+            <div className="mx-auto w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center mb-4">
+              <Building2 className="w-6 h-6 text-white" />
             </div>
-            <div>
-              <Label htmlFor="password">Contraseña</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                required
-                className="mt-1"
-              />
+            <CardTitle className="text-2xl font-bold text-gray-900">
+              Acceso al Backoffice
+            </CardTitle>
+            <p className="text-gray-600 mt-2">
+              Ingresa tus credenciales para continuar
+            </p>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div>
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="tu@empresa.com"
+                  required
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="password">Contraseña</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                  className="mt-1"
+                />
+              </div>
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? (
+                  "Iniciando sesión..."
+                ) : (
+                  <>
+                    <LogIn className="w-4 h-4 mr-2" />
+                    Iniciar Sesión
+                  </>
+                )}
+              </Button>
+            </form>
+            <div className="mt-6 text-center">
+              <Button 
+                variant="link" 
+                onClick={() => navigate('/')}
+                className="text-blue-600"
+              >
+                ← Volver al inicio
+              </Button>
             </div>
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? (
-                "Iniciando sesión..."
-              ) : (
-                <>
-                  <LogIn className="w-4 h-4 mr-2" />
-                  Iniciar Sesión
-                </>
-              )}
-            </Button>
-          </form>
-          <div className="mt-6 text-center">
-            <Button 
-              variant="link" 
-              onClick={() => navigate('/')}
-              className="text-blue-600"
-            >
-              ← Volver al inicio
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 };

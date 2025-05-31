@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,7 +23,7 @@ const SetupAdmin = () => {
       const { data: adminUser } = await supabase
         .from('usuarios_backoffice')
         .select('*')
-        .eq('email', 'admin@empresa.com')
+        .eq('email', 'info@zerotek.es')
         .eq('rol', 'admin')
         .maybeSingle();
 
@@ -56,12 +55,12 @@ const SetupAdmin = () => {
 
       // Crear usuario administrador en auth
       const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: 'admin@empresa.com',
+        email: 'info@zerotek.es',
         password: 'admin1234',
         options: {
           data: { 
             force_password_reset: true,
-            nombre: 'Administrador'
+            nombre: 'Administrador Zerotek'
           }
         }
       });
@@ -106,8 +105,8 @@ const SetupAdmin = () => {
         .insert({
           auth_user_id: authData.user.id,
           empresa_id: empresa.id,
-          email: 'admin@empresa.com',
-          nombre: 'Administrador',
+          email: 'info@zerotek.es',
+          nombre: 'Administrador Zerotek',
           rol: 'admin',
           activo: true
         });
@@ -124,7 +123,7 @@ const SetupAdmin = () => {
 
       toast({
         title: "Usuario administrador creado",
-        description: "Usuario: admin@empresa.com | Contraseña: admin1234 (se solicitará cambio en el primer login)",
+        description: "Usuario: info@zerotek.es | Contraseña: admin1234 (se solicitará cambio en el primer login)",
       });
 
       setAdminExists(true);
@@ -173,7 +172,7 @@ const SetupAdmin = () => {
             <div className="space-y-4">
               <div className="p-4 bg-gray-50 rounded-lg">
                 <h4 className="text-sm font-semibold text-gray-900 mb-2">Credenciales de acceso:</h4>
-                <p className="text-sm text-gray-600">Email: admin@empresa.com</p>
+                <p className="text-sm text-gray-600">Email: info@zerotek.es</p>
                 <p className="text-sm text-gray-600">Contraseña: admin1234</p>
               </div>
               <Button 
@@ -208,7 +207,7 @@ const SetupAdmin = () => {
             <div className="p-4 bg-blue-50 rounded-lg">
               <h4 className="text-sm font-semibold text-blue-900 mb-2">Se creará un usuario administrador con:</h4>
               <ul className="text-sm text-blue-700 space-y-1">
-                <li>• Email: admin@empresa.com</li>
+                <li>• Email: info@zerotek.es</li>
                 <li>• Contraseña: admin1234</li>
                 <li>• Se solicitará cambio de contraseña en el primer login</li>
                 <li>• Acceso completo al sistema</li>

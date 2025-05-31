@@ -1,0 +1,57 @@
+
+import { Building2, LogIn, UserPlus } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { useEmpresa } from "@/hooks/useEmpresa";
+
+interface AppHeaderProps {
+  showButtons?: boolean;
+}
+
+const AppHeader = ({ showButtons = true }: AppHeaderProps) => {
+  const { empresa, loading } = useEmpresa();
+
+  return (
+    <header className="bg-white shadow-sm border-b">
+      <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+        <div className="flex items-center space-x-3">
+          {empresa?.logo_url ? (
+            <img
+              src={empresa.logo_url}
+              alt={`Logo de ${empresa.nombre}`}
+              className="w-8 h-8 object-contain"
+            />
+          ) : (
+            <Building2 className="w-8 h-8 text-blue-600" />
+          )}
+          <div>
+            <h1 className="text-xl font-semibold text-gray-900">
+              Canal de Denuncias
+            </h1>
+            {empresa && !loading && (
+              <p className="text-sm text-gray-600">{empresa.nombre}</p>
+            )}
+          </div>
+        </div>
+        {showButtons && (
+          <div className="flex items-center space-x-4">
+            <Link to="/setup-admin">
+              <Button variant="outline" size="sm">
+                <UserPlus className="w-4 h-4 mr-2" />
+                Configurar Admin
+              </Button>
+            </Link>
+            <Link to="/login">
+              <Button variant="outline" size="sm">
+                <LogIn className="w-4 h-4 mr-2" />
+                Acceso Backoffice
+              </Button>
+            </Link>
+          </div>
+        )}
+      </div>
+    </header>
+  );
+};
+
+export default AppHeader;
