@@ -45,6 +45,50 @@ export type Database = {
         }
         Relationships: []
       }
+      configuracion_correo: {
+        Row: {
+          activo: boolean | null
+          created_at: string
+          dominio_remitente: string | null
+          email_remitente: string | null
+          empresa_id: string
+          id: string
+          nombre_remitente: string | null
+          resend_api_key: string | null
+          updated_at: string
+        }
+        Insert: {
+          activo?: boolean | null
+          created_at?: string
+          dominio_remitente?: string | null
+          email_remitente?: string | null
+          empresa_id: string
+          id?: string
+          nombre_remitente?: string | null
+          resend_api_key?: string | null
+          updated_at?: string
+        }
+        Update: {
+          activo?: boolean | null
+          created_at?: string
+          dominio_remitente?: string | null
+          email_remitente?: string | null
+          empresa_id?: string
+          id?: string
+          nombre_remitente?: string | null
+          resend_api_key?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "configuracion_correo_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: true
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       denuncia_archivos: {
         Row: {
           created_at: string

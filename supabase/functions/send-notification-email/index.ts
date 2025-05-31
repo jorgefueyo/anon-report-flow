@@ -1,8 +1,7 @@
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { Resend } from "npm:resend@2.0.0";
-
-const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -18,10 +17,13 @@ interface NotificationEmailRequest {
   estadoNuevo?: string;
   asignadoA?: string;
   empresaNombre?: string;
+  configCorreo?: any;
 }
 
-const getEmailTemplate = (data: NotificationEmailRequest) => {
-  const { type, denunciaCode, estadoAnterior, estadoNuevo, asignadoA, empresaNombre } = data;
+const getEmailTemplate = (data: NotificationEmailRequest, configCorreo?: any) => {
+  const { type, denunciaCode, estadoAnterior, estadoNuevo, empresaNombre } = data;
+  const nombreRemitente = configCorreo?.nombre_remitente || 'Sistema de Denuncias';
+  const empresaNombreFinal = empresaNombre || 'Sistema de Denuncias';
   
   switch (type) {
     case 'estado_cambio':
@@ -50,7 +52,7 @@ const getEmailTemplate = (data: NotificationEmailRequest) => {
               </p>
               <p style="font-size: 14px; color: #666; margin-top: 30px;">
                 Atentamente,<br>
-                <strong>${empresaNombre || 'Sistema de Denuncias'}</strong>
+                <strong>${empresaNombreFinal}</strong>
               </p>
             </div>
           </div>
@@ -83,7 +85,7 @@ const getEmailTemplate = (data: NotificationEmailRequest) => {
               </p>
               <p style="font-size: 14px; color: #666; margin-top: 30px;">
                 Atentamente,<br>
-                <strong>${empresaNombre || 'Sistema de Denuncias'}</strong>
+                <strong>${empresaNombreFinal}</strong>
               </p>
             </div>
           </div>
@@ -114,7 +116,7 @@ const getEmailTemplate = (data: NotificationEmailRequest) => {
               </p>
               <p style="font-size: 14px; color: #666; margin-top: 30px;">
                 Atentamente,<br>
-                <strong>${empresaNombre || 'Sistema de Denuncias'}</strong>
+                <strong>${empresaNombreFinal}</strong>
               </p>
             </div>
           </div>
@@ -152,11 +154,35 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    const emailTemplate = getEmailTemplate(requestData);
+    // Obtener configuración de correo desde Supabase
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+
+    const { data: configCorreo } = await supabaseClient
+      .from('configuracion_correo')
+      .select('*')
+      .eq('activo', true)
+      .single();
+
+    if (!configCorreo || !configCorreo.resend_api_key) {
+      console.log("No email configuration found or Resend API key missing");
+      return new Response(
+        JSON.stringify({ error: "Configuración de correo no encontrada" }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
+    const resend = new Resend(configCorreo.resend_api_key);
+    const emailTemplate = getEmailTemplate(requestData, configCorreo);
 
     console.log("Sending email to:", recipientEmail);
     const emailResponse = await resend.emails.send({
-      from: "Sistema de Denuncias <onboarding@resend.dev>",
+      from: `${configCorreo.nombre_remitente || 'Sistema de Denuncias'} <${configCorreo.email_remitente || 'onboarding@resend.dev'}>`,
       to: [recipientEmail],
       subject: emailTemplate.subject,
       html: emailTemplate.html,

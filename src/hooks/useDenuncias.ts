@@ -38,7 +38,7 @@ export const useDenuncias = () => {
       // Preparar datos para inserción - usando un codigo_seguimiento temporal que será reemplazado por el trigger
       const datosInsercion = {
         empresa_id: empresa.id,
-        codigo_seguimiento: 'TEMP-' + Date.now(), // Temporal, será reemplazado por el trigger
+        codigo_seguimiento: 'TEMP-' + Date.now(),
         email_encriptado: encryptData(datos.email),
         nombre_encriptado: datos.nombre ? encryptData(datos.nombre) : null,
         telefono_encriptado: datos.telefono ? encryptData(datos.telefono) : null,
@@ -80,7 +80,7 @@ export const useDenuncias = () => {
         await subirArchivos(denuncia.id, datos.archivos);
       }
 
-      // Enviar notificación por email al denunciante
+      // Enviar notificación por email al denunciante (esto se hace automáticamente con los triggers)
       try {
         await sendNewDenunciaNotification(
           datos.email,

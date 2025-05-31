@@ -24,8 +24,7 @@ export const useConfiguracionCorreo = (empresaId?: string) => {
 
     const loadConfiguracion = async () => {
       try {
-        // Usar supabase.from con any para evitar errores de tipo hasta que se actualicen los tipos
-        const { data, error } = await (supabase as any)
+        const { data, error } = await supabase
           .from('configuracion_correo')
           .select('*')
           .eq('empresa_id', empresaId)
@@ -52,8 +51,8 @@ export const useConfiguracionCorreo = (empresaId?: string) => {
 
     try {
       if (configuracion) {
-        // Actualizar configuración existente usando any para evitar errores de tipo
-        const { data, error } = await (supabase as any)
+        // Actualizar configuración existente
+        const { data, error } = await supabase
           .from('configuracion_correo')
           .update(updatedData)
           .eq('id', configuracion.id)
@@ -63,8 +62,8 @@ export const useConfiguracionCorreo = (empresaId?: string) => {
         if (error) throw error;
         setConfiguracion(data);
       } else {
-        // Crear nueva configuración usando any para evitar errores de tipo
-        const { data, error } = await (supabase as any)
+        // Crear nueva configuración
+        const { data, error } = await supabase
           .from('configuracion_correo')
           .insert({
             empresa_id: empresaId,
