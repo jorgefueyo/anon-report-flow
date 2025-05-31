@@ -34,7 +34,8 @@ import {
   Users, 
   BarChart3,
   Upload,
-  Save
+  Save,
+  Mail
 } from "lucide-react";
 
 interface Admin {
@@ -59,6 +60,7 @@ const BackofficeEmpresa = () => {
   const [admin, setAdmin] = useState<Admin | null>(null);
   const [saving, setSaving] = useState(false);
   const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { empresa, loading, updateEmpresa } = useEmpresa();
@@ -107,6 +109,10 @@ const BackofficeEmpresa = () => {
         email: empresa.email || '',
         telefono: empresa.telefono || '',
       });
+      
+      if (empresa.logo_url) {
+        setLogoPreview(empresa.logo_url);
+      }
     }
   }, [empresa, form]);
 
@@ -135,32 +141,31 @@ const BackofficeEmpresa = () => {
       }
       
       setLogoFile(file);
+      
+      // Crear preview
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setLogoPreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
     }
   };
 
   const onSubmit = async (data: EmpresaFormData) => {
-    if (!empresa) return;
-
     setSaving(true);
     try {
-      const success = await updateEmpresa(data);
+      const result = await updateEmpresa(data, logoFile || undefined);
       
-      if (success) {
+      if (result.success) {
         toast({
-          title: "Datos guardados",
-          description: "La configuración de la empresa se ha actualizado correctamente",
+          title: "✅ Datos guardados correctamente",
+          description: "La configuración de la empresa se ha actualizado exitosamente",
         });
         
-        // TODO: Implementar subida de logo cuando esté configurado Storage
-        if (logoFile) {
-          console.log('Logo file ready for upload:', logoFile.name);
-          toast({
-            title: "Logo preparado",
-            description: "El logo se subirá cuando esté configurado el almacenamiento",
-          });
-        }
+        // Limpiar el archivo seleccionado
+        setLogoFile(null);
       } else {
-        throw new Error('Error al actualizar los datos');
+        throw new Error(result.error || 'Error al actualizar los datos');
       }
     } catch (error) {
       console.error('Error saving empresa:', error);
@@ -200,7 +205,7 @@ const BackofficeEmpresa = () => {
               <Building2 className="w-8 h-8 text-blue-600" />
               <div>
                 <h2 className="text-lg font-bold">Backoffice</h2>
-                <p className="text-sm text-gray-600">{admin.nombre}</p>
+                <p className="text-sm text-gray-600">{admin?.nombre}</p>
               </div>
             </div>
           </SidebarHeader>
@@ -239,6 +244,16 @@ const BackofficeEmpresa = () => {
               
               <SidebarMenuItem>
                 <SidebarMenuButton 
+                  onClick={() => navigate('/backoffice/configuracion-correo')}
+                  className="w-full"
+                >
+                  <Mail className="w-4 h-4" />
+                  Configuración Correo
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              
+              <SidebarMenuItem>
+                <SidebarMenuButton 
                   onClick={() => navigate('/backoffice/admin')}
                   className="w-full"
                 >
@@ -254,7 +269,7 @@ const BackofficeEmpresa = () => {
           <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
             <SidebarTrigger className="-ml-1" />
             <div className="ml-auto flex items-center space-x-4">
-              <span className="text-sm text-gray-600">Bienvenido, {admin.nombre}</span>
+              <span className="text-sm text-gray-600">Bienvenido, {admin?.nombre}</span>
               <Button variant="outline" size="sm" onClick={handleLogout}>
                 <LogOut className="w-4 h-4 mr-2" />
                 Cerrar Sesión
@@ -421,6 +436,17 @@ const BackofficeEmpresa = () => {
                         <p className="text-sm text-gray-600">
                           Sube el logo de tu empresa (formato JPG o PNG, tamaño máximo 2MB)
                         </p>
+                        
+                        {logoPreview && (
+                          <div className="flex justify-center mb-4">
+                            <img 
+                              src={logoPreview} 
+                              alt="Logo preview" 
+                              className="max-h-32 object-contain border rounded"
+                            />
+                          </div>
+                        )}
+                        
                         <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
                           <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                           <p className="text-gray-500 mb-2">
