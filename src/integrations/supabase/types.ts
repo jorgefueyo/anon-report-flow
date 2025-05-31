@@ -263,7 +263,7 @@ export type Database = {
         Row: {
           acciones_realizadas: string | null
           created_at: string
-          denuncia_id: string
+          denuncia_id: string | null
           estado_anterior: string | null
           estado_nuevo: string
           fecha: string
@@ -275,7 +275,7 @@ export type Database = {
         Insert: {
           acciones_realizadas?: string | null
           created_at?: string
-          denuncia_id: string
+          denuncia_id?: string | null
           estado_anterior?: string | null
           estado_nuevo: string
           fecha?: string
@@ -287,7 +287,7 @@ export type Database = {
         Update: {
           acciones_realizadas?: string | null
           created_at?: string
-          denuncia_id?: string
+          denuncia_id?: string | null
           estado_anterior?: string | null
           estado_nuevo?: string
           fecha?: string

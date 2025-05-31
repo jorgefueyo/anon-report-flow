@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -32,7 +33,7 @@ export const useDenuncias = () => {
 
       const empresa = empresas[0];
 
-      // Preparar datos para inserción
+      // Preparar datos para inserción (sin codigo_seguimiento ya que se auto-genera)
       const datosInsercion = {
         empresa_id: empresa.id,
         email_encriptado: encryptData(datos.email),
@@ -99,16 +100,10 @@ export const useDenuncias = () => {
     try {
       console.log('Actualizando estado de denuncia:', { denunciaId, nuevoEstado, observaciones });
 
-      // Mapear estados para que coincidan con los válidos en la base de datos
-      let estadoValido = nuevoEstado;
-      if (nuevoEstado === 'en_tramite') {
-        estadoValido = 'en_proceso';
-      }
-
       const { error } = await supabase
         .from('denuncias')
         .update({ 
-          estado: estadoValido,
+          estado: nuevoEstado,
           observaciones_internas: observaciones,
           updated_at: new Date().toISOString()
         })
@@ -119,25 +114,9 @@ export const useDenuncias = () => {
         throw new Error('Error al actualizar el estado: ' + error.message);
       }
 
-      // Crear registro de seguimiento
-      const { error: seguimientoError } = await supabase
-        .from('seguimiento_denuncias')
-        .insert({
-          denuncia_id: denunciaId,
-          estado_nuevo: estadoValido,
-          operacion: 'Cambio de estado',
-          acciones_realizadas: `Estado cambiado a ${estadoValido}`,
-          observaciones: observaciones
-        });
-
-      if (seguimientoError) {
-        console.error('Error creando seguimiento:', seguimientoError);
-        // No fallar por esto, es secundario
-      }
-
       toast({
         title: "Estado actualizado",
-        description: `La denuncia ha sido actualizada a: ${estadoValido}`,
+        description: `La denuncia ha sido actualizada a: ${nuevoEstado}`,
       });
 
       return true;
@@ -173,21 +152,6 @@ export const useDenuncias = () => {
         throw new Error('Error al asignar la denuncia: ' + error.message);
       }
 
-      // Crear registro de seguimiento
-      const { error: seguimientoError } = await supabase
-        .from('seguimiento_denuncias')
-        .insert({
-          denuncia_id: denunciaId,
-          usuario_id: usuarioId,
-          estado_nuevo: 'asignada',
-          operacion: 'Asignación',
-          acciones_realizadas: 'Denuncia asignada para revisión'
-        });
-
-      if (seguimientoError) {
-        console.error('Error creando seguimiento:', seguimientoError);
-      }
-
       toast({
         title: "Denuncia asignada",
         description: "La denuncia ha sido asignada correctamente",
@@ -204,55 +168,6 @@ export const useDenuncias = () => {
       return false;
     } finally {
       setLoading(false);
-    }
-  };
-
-  const subirArchivos = async (denunciaId: string, archivos: File[]) => {
-    console.log('Iniciando subida de archivos para denuncia:', denunciaId);
-    
-    for (const archivo of archivos) {
-      try {
-        console.log('Procesando archivo:', archivo.name);
-        
-        // Generar nombre único para el archivo
-        const timestamp = Date.now();
-        const nombreArchivo = `${timestamp}-${archivo.name}`;
-        const rutaArchivo = `${denunciaId}/${nombreArchivo}`;
-
-        console.log('Subiendo archivo a storage:', rutaArchivo);
-
-        // Subir archivo a Supabase Storage
-        const { error: uploadError } = await supabase.storage
-          .from('denuncia-attachments')
-          .upload(rutaArchivo, archivo);
-
-        if (uploadError) {
-          console.error('Error subiendo archivo:', uploadError);
-          continue;
-        }
-
-        console.log('Archivo subido, guardando metadata...');
-
-        // Guardar metadata del archivo en la base de datos
-        const { error: metadataError } = await supabase
-          .from('denuncia_archivos')
-          .insert({
-            denuncia_id: denunciaId,
-            nombre_archivo: archivo.name,
-            ruta_archivo: rutaArchivo,
-            tipo_archivo: archivo.type,
-            tamano_archivo: archivo.size,
-          });
-
-        if (metadataError) {
-          console.error('Error guardando metadata del archivo:', metadataError);
-        } else {
-          console.log('Metadata del archivo guardada exitosamente');
-        }
-
-      } catch (error) {
-        console.error('Error procesando archivo:', archivo.name, error);
-      }
     }
   };
 

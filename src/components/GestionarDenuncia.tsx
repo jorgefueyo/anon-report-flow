@@ -24,18 +24,12 @@ const GestionarDenuncia = ({ denuncia, onDenunciaActualizada }: GestionarDenunci
       return; // No hay cambios
     }
 
-    // Mapear estado de la UI al estado de la base de datos
-    let estadoParaDB = nuevoEstado;
-    if (nuevoEstado === 'en_tramite') {
-      estadoParaDB = 'en_proceso';
-    }
-
-    const exito = await actualizarEstadoDenuncia(denuncia.id, estadoParaDB, observaciones);
+    const exito = await actualizarEstadoDenuncia(denuncia.id, nuevoEstado, observaciones);
     if (exito) {
       // Actualizar la denuncia local
       const denunciaActualizada = {
         ...denuncia,
-        estado: estadoParaDB,
+        estado: nuevoEstado,
         observaciones_internas: observaciones,
         updated_at: new Date().toISOString()
       };
@@ -50,7 +44,6 @@ const GestionarDenuncia = ({ denuncia, onDenunciaActualizada }: GestionarDenunci
       case 'asignada':
         return <User className="w-4 h-4 text-blue-600" />;
       case 'en_proceso':
-      case 'en_tramite':
         return <AlertCircle className="w-4 h-4 text-orange-600" />;
       case 'finalizada':
         return <CheckCircle className="w-4 h-4 text-green-600" />;
@@ -66,7 +59,6 @@ const GestionarDenuncia = ({ denuncia, onDenunciaActualizada }: GestionarDenunci
       case 'asignada':
         return 'bg-blue-100 text-blue-800';
       case 'en_proceso':
-      case 'en_tramite':
         return 'bg-orange-100 text-orange-800';
       case 'finalizada':
         return 'bg-green-100 text-green-800';
@@ -82,9 +74,7 @@ const GestionarDenuncia = ({ denuncia, onDenunciaActualizada }: GestionarDenunci
       case 'asignada':
         return 'ASIGNADA';
       case 'en_proceso':
-        return 'EN TRÁMITE';
-      case 'en_tramite':
-        return 'EN TRÁMITE';
+        return 'EN PROCESO';
       case 'finalizada':
         return 'FINALIZADA';
       default:
@@ -117,7 +107,7 @@ const GestionarDenuncia = ({ denuncia, onDenunciaActualizada }: GestionarDenunci
             <SelectContent>
               <SelectItem value="pendiente">Pendiente</SelectItem>
               <SelectItem value="asignada">Asignada</SelectItem>
-              <SelectItem value="en_proceso">En trámite</SelectItem>
+              <SelectItem value="en_proceso">En proceso</SelectItem>
               <SelectItem value="finalizada">Finalizada</SelectItem>
             </SelectContent>
           </Select>
