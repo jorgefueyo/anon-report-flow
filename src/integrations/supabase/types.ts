@@ -45,6 +45,44 @@ export type Database = {
         }
         Relationships: []
       }
+      denuncia_archivos: {
+        Row: {
+          created_at: string
+          denuncia_id: string | null
+          id: string
+          nombre_archivo: string
+          ruta_archivo: string
+          tamano_archivo: number | null
+          tipo_archivo: string
+        }
+        Insert: {
+          created_at?: string
+          denuncia_id?: string | null
+          id?: string
+          nombre_archivo: string
+          ruta_archivo: string
+          tamano_archivo?: number | null
+          tipo_archivo: string
+        }
+        Update: {
+          created_at?: string
+          denuncia_id?: string | null
+          id?: string
+          nombre_archivo?: string
+          ruta_archivo?: string
+          tamano_archivo?: number | null
+          tipo_archivo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "denuncia_archivos_denuncia_id_fkey"
+            columns: ["denuncia_id"]
+            isOneToOne: false
+            referencedRelation: "denuncias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       denuncias: {
         Row: {
           asignado_a: string | null

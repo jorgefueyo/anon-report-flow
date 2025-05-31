@@ -147,8 +147,6 @@ export type Database = {
           telefono: string | null;
           email: string | null;
           logo_url: string | null;
-          color_primario: string;
-          color_secundario: string;
           configurada: boolean | null;
           codigo_postal: string | null;
           ciudad: string | null;
@@ -165,8 +163,6 @@ export type Database = {
           telefono?: string | null;
           email?: string | null;
           logo_url?: string | null;
-          color_primario?: string;
-          color_secundario?: string;
           configurada?: boolean | null;
           codigo_postal?: string | null;
           ciudad?: string | null;
@@ -183,8 +179,6 @@ export type Database = {
           telefono?: string | null;
           email?: string | null;
           logo_url?: string | null;
-          color_primario?: string;
-          color_secundario?: string;
           configurada?: boolean | null;
           codigo_postal?: string | null;
           ciudad?: string | null;

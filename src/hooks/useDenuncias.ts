@@ -33,7 +33,7 @@ export const useDenuncias = () => {
 
       const empresa_id = empresas[0].id;
 
-      // Preparar datos para inserción - NO incluir codigo_seguimiento
+      // Preparar datos para inserción - NO incluir codigo_seguimiento ya que se genera automáticamente
       const datosInsercion = {
         empresa_id,
         email_encriptado: encryptData(datos.email),
