@@ -34,6 +34,8 @@ import {
   AlertTriangle 
 } from "lucide-react";
 
+type EstadoDenuncia = 'pendiente' | 'asignada' | 'en_tramite' | 'finalizada';
+
 const GestionDenuncias = () => {
   const [denuncias, setDenuncias] = useState<any[]>([]);
   const [usuarios, setUsuarios] = useState<any[]>([]);
@@ -88,7 +90,7 @@ const GestionDenuncias = () => {
     setLoading(false);
   };
 
-  const updateEstado = async (denunciaId: string, nuevoEstado: string, asignadoA?: string) => {
+  const updateEstado = async (denunciaId: string, nuevoEstado: EstadoDenuncia, asignadoA?: string) => {
     const { error } = await supabase
       .from('denuncias')
       .update({ 
@@ -105,15 +107,6 @@ const GestionDenuncias = () => {
       });
       return;
     }
-
-    // Registrar en historial
-    await supabase
-      .from('historial_estados')
-      .insert({
-        denuncia_id: denunciaId,
-        estado_nuevo: nuevoEstado,
-        comentario: `Estado actualizado a ${nuevoEstado}`
-      });
 
     toast({
       title: "Estado actualizado",
@@ -296,7 +289,7 @@ const GestionDenuncias = () => {
                                         <Label>Cambiar Estado</Label>
                                         <Select 
                                           value={selectedDenuncia.estado}
-                                          onValueChange={(valor) => updateEstado(selectedDenuncia.id, valor)}
+                                          onValueChange={(valor: EstadoDenuncia) => updateEstado(selectedDenuncia.id, valor)}
                                         >
                                           <SelectTrigger className="mt-1">
                                             <SelectValue />
