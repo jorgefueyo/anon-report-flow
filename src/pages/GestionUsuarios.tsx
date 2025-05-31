@@ -23,38 +23,57 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Switch } from "@/components/ui/switch";
-import { ArrowLeft, UserPlus, Edit, Trash2 } from "lucide-react";
+import { 
+  ArrowLeft, 
+  UserPlus, 
+  Edit, 
+  UserCheck,
+  UserX,
+  Mail,
+  Shield
+} from "lucide-react";
+
+type UserRole = 'admin' | 'supervisor' | 'viewer';
+
+interface Usuario {
+  id: string;
+  email: string;
+  nombre: string;
+  rol: UserRole;
+  activo: boolean;
+  created_at: string;
+  auth_user_id: string | null;
+}
 
 const GestionUsuarios = () => {
-  const [usuarios, setUsuarios] = useState<any[]>([]);
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [newUser, setNewUser] = useState({
-    email: "",
-    nombre: "",
-    rol: "viewer",
-    password: ""
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [empresaId, setEmpresaId] = useState<string>('');
+  const [formData, setFormData] = useState({
+    email: '',
+    nombre: '',
+    rol: 'viewer' as UserRole,
+    password: ''
   });
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
-    loadUsers();
+    loadUsuarios();
   }, []);
 
-  const loadUsers = async () => {
+  const loadUsuarios = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       navigate('/login');
       return;
     }
 
-    // Obtener datos del usuario actual
+    // Obtener empresa del usuario actual
     const { data: userData } = await supabase
       .from('usuarios_backoffice')
-      .select('*')
+      .select('empresa_id, rol')
       .eq('auth_user_id', user.id)
       .single();
 
@@ -68,7 +87,7 @@ const GestionUsuarios = () => {
       return;
     }
 
-    setCurrentUser(userData);
+    setEmpresaId(userData.empresa_id);
 
     // Cargar usuarios de la empresa
     const { data: usuariosData } = await supabase
@@ -82,107 +101,72 @@ const GestionUsuarios = () => {
   };
 
   const createUser = async () => {
-    if (!newUser.email || !newUser.nombre || !newUser.password) {
+    if (!formData.email || !formData.nombre || !formData.password) {
       toast({
-        title: "Campos requeridos",
+        title: "Error",
         description: "Todos los campos son obligatorios",
         variant: "destructive",
       });
       return;
     }
 
-    try {
-      // Crear usuario en auth
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: newUser.email,
-        password: newUser.password,
-        options: {
-          data: { force_password_reset: true }
-        }
-      });
-
-      if (authError) {
-        toast({
-          title: "Error al crear usuario",
-          description: authError.message,
-          variant: "destructive",
-        });
-        return;
+    // Crear usuario en auth
+    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+      email: formData.email,
+      password: formData.password,
+      email_confirm: true,
+      user_metadata: { 
+        nombre: formData.nombre,
+        force_password_reset: true 
       }
+    });
 
-      if (!authData.user) {
-        toast({
-          title: "Error",
-          description: "No se pudo crear el usuario",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Crear registro en usuarios_backoffice
-      const { error: userError } = await supabase
-        .from('usuarios_backoffice')
-        .insert({
-          auth_user_id: authData.user.id,
-          empresa_id: currentUser.empresa_id,
-          email: newUser.email,
-          nombre: newUser.nombre,
-          rol: newUser.rol,
-          activo: true
-        });
-
-      if (userError) {
-        toast({
-          title: "Error al crear usuario",
-          description: userError.message,
-          variant: "destructive",
-        });
-        return;
-      }
-
+    if (authError) {
       toast({
-        title: "Usuario creado",
-        description: `Se ha creado el usuario ${newUser.email}`,
-      });
-
-      setShowCreateDialog(false);
-      setNewUser({ email: "", nombre: "", rol: "viewer", password: "" });
-      loadUsers();
-
-    } catch (error) {
-      console.error('Error:', error);
-      toast({
-        title: "Error",
-        description: "Error inesperado al crear el usuario",
+        title: "Error al crear usuario",
+        description: authError.message,
         variant: "destructive",
       });
+      return;
     }
-  };
 
-  const toggleUserStatus = async (userId: string, activo: boolean) => {
-    const { error } = await supabase
+    // Crear registro en usuarios_backoffice
+    const { error: userError } = await supabase
       .from('usuarios_backoffice')
-      .update({ activo })
-      .eq('id', userId);
+      .insert({
+        auth_user_id: authData.user.id,
+        empresa_id: empresaId,
+        email: formData.email,
+        nombre: formData.nombre,
+        rol: formData.rol,
+        activo: true
+      });
 
-    if (error) {
+    if (userError) {
       toast({
-        title: "Error",
-        description: "No se pudo actualizar el estado del usuario",
+        title: "Error al crear usuario del backoffice",
+        description: userError.message,
         variant: "destructive",
       });
       return;
     }
 
     toast({
-      title: "Estado actualizado",
-      description: `Usuario ${activo ? 'activado' : 'desactivado'} correctamente`,
+      title: "Usuario creado",
+      description: "El usuario ha sido creado exitosamente",
     });
 
-    loadUsers();
+    setFormData({
+      email: '',
+      nombre: '',
+      rol: 'viewer',
+      password: ''
+    });
+    setShowCreateForm(false);
+    loadUsuarios();
   };
 
-  const updateUserRole = async (userId: string, newRole: string) => {
+  const updateUserRole = async (userId: string, newRole: UserRole) => {
     const { error } = await supabase
       .from('usuarios_backoffice')
       .update({ rol: newRole })
@@ -191,7 +175,7 @@ const GestionUsuarios = () => {
     if (error) {
       toast({
         title: "Error",
-        description: "No se pudo actualizar el rol del usuario",
+        description: "No se pudo actualizar el rol",
         variant: "destructive",
       });
       return;
@@ -199,10 +183,50 @@ const GestionUsuarios = () => {
 
     toast({
       title: "Rol actualizado",
-      description: "El rol del usuario ha sido actualizado correctamente",
+      description: "El rol del usuario ha sido actualizado",
     });
 
-    loadUsers();
+    loadUsuarios();
+  };
+
+  const toggleUserStatus = async (userId: string, newStatus: boolean) => {
+    const { error } = await supabase
+      .from('usuarios_backoffice')
+      .update({ activo: newStatus })
+      .eq('id', userId);
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "No se pudo actualizar el estado",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    toast({
+      title: "Estado actualizado",
+      description: `El usuario ha sido ${newStatus ? 'activado' : 'desactivado'}`,
+    });
+
+    loadUsuarios();
+  };
+
+  const getRoleBadge = (rol: string) => {
+    const badges = {
+      admin: { color: 'bg-red-100 text-red-800', label: 'Administrador' },
+      supervisor: { color: 'bg-blue-100 text-blue-800', label: 'Supervisor' },
+      viewer: { color: 'bg-gray-100 text-gray-800', label: 'Visualizador' }
+    };
+    
+    const badge = badges[rol as keyof typeof badges] || badges.viewer;
+    
+    return (
+      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${badge.color}`}>
+        <Shield className="w-3 h-3 mr-1" />
+        {badge.label}
+      </span>
+    );
   };
 
   if (loading) {
@@ -218,8 +242,9 @@ const GestionUsuarios = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+      <div className="max-w-6xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
+          {/* Header */}
           <div className="mb-6">
             <div className="flex items-center justify-between">
               <div>
@@ -235,10 +260,10 @@ const GestionUsuarios = () => {
                   Gestión de Usuarios
                 </h1>
                 <p className="text-gray-600">
-                  Administra los usuarios de tu empresa
+                  Administra los usuarios del sistema y sus permisos
                 </p>
               </div>
-              <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+              <Dialog open={showCreateForm} onOpenChange={setShowCreateForm}>
                 <DialogTrigger asChild>
                   <Button>
                     <UserPlus className="w-4 h-4 mr-2" />
@@ -249,40 +274,42 @@ const GestionUsuarios = () => {
                   <DialogHeader>
                     <DialogTitle>Crear Nuevo Usuario</DialogTitle>
                   </DialogHeader>
-                  <div className="space-y-4">
+                  <div className="space-y-4 pt-4">
                     <div>
                       <Label htmlFor="email">Email</Label>
                       <Input
                         id="email"
                         type="email"
-                        value={newUser.email}
-                        onChange={(e) => setNewUser({...newUser, email: e.target.value})}
+                        value={formData.email}
+                        onChange={(e) => setFormData({...formData, email: e.target.value})}
                         placeholder="usuario@empresa.com"
                       />
                     </div>
                     <div>
-                      <Label htmlFor="nombre">Nombre completo</Label>
+                      <Label htmlFor="nombre">Nombre Completo</Label>
                       <Input
                         id="nombre"
-                        value={newUser.nombre}
-                        onChange={(e) => setNewUser({...newUser, nombre: e.target.value})}
+                        value={formData.nombre}
+                        onChange={(e) => setFormData({...formData, nombre: e.target.value})}
                         placeholder="Nombre del usuario"
                       />
                     </div>
                     <div>
-                      <Label htmlFor="password">Contraseña temporal</Label>
+                      <Label htmlFor="password">Contraseña Temporal</Label>
                       <Input
                         id="password"
                         type="password"
-                        value={newUser.password}
-                        onChange={(e) => setNewUser({...newUser, password: e.target.value})}
-                        placeholder="Mínimo 6 caracteres"
-                        minLength={6}
+                        value={formData.password}
+                        onChange={(e) => setFormData({...formData, password: e.target.value})}
+                        placeholder="Contraseña temporal"
                       />
+                      <p className="text-sm text-gray-500 mt-1">
+                        El usuario deberá cambiar esta contraseña en su primer login
+                      </p>
                     </div>
                     <div>
                       <Label htmlFor="rol">Rol</Label>
-                      <Select value={newUser.rol} onValueChange={(value) => setNewUser({...newUser, rol: value})}>
+                      <Select value={formData.rol} onValueChange={(value: UserRole) => setFormData({...formData, rol: value})}>
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
@@ -293,15 +320,21 @@ const GestionUsuarios = () => {
                         </SelectContent>
                       </Select>
                     </div>
-                    <Button onClick={createUser} className="w-full">
-                      Crear Usuario
-                    </Button>
+                    <div className="flex justify-end space-x-2 pt-4">
+                      <Button variant="outline" onClick={() => setShowCreateForm(false)}>
+                        Cancelar
+                      </Button>
+                      <Button onClick={createUser}>
+                        Crear Usuario
+                      </Button>
+                    </div>
                   </div>
                 </DialogContent>
               </Dialog>
             </div>
           </div>
 
+          {/* Tabla de Usuarios */}
           <Card>
             <CardHeader>
               <CardTitle>Usuarios ({usuarios.length})</CardTitle>
@@ -310,53 +343,61 @@ const GestionUsuarios = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Nombre</TableHead>
+                    <TableHead>Usuario</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Rol</TableHead>
                     <TableHead>Estado</TableHead>
-                    <TableHead>Fecha de creación</TableHead>
+                    <TableHead>Fecha Creación</TableHead>
                     <TableHead>Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {usuarios.map((usuario) => (
                     <TableRow key={usuario.id}>
-                      <TableCell className="font-medium">{usuario.nombre}</TableCell>
-                      <TableCell>{usuario.email}</TableCell>
-                      <TableCell>
-                        <Select 
-                          value={usuario.rol}
-                          onValueChange={(value) => updateUserRole(usuario.id, value)}
-                          disabled={usuario.id === currentUser.id}
-                        >
-                          <SelectTrigger className="w-32">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="admin">Admin</SelectItem>
-                            <SelectItem value="supervisor">Supervisor</SelectItem>
-                            <SelectItem value="viewer">Viewer</SelectItem>
-                          </SelectContent>
-                        </Select>
+                      <TableCell className="font-medium">
+                        {usuario.nombre}
                       </TableCell>
                       <TableCell>
-                        <Switch
-                          checked={usuario.activo}
-                          onCheckedChange={(checked) => toggleUserStatus(usuario.id, checked)}
-                          disabled={usuario.id === currentUser.id}
-                        />
+                        <div className="flex items-center">
+                          <Mail className="w-4 h-4 mr-2 text-gray-400" />
+                          {usuario.email}
+                        </div>
+                      </TableCell>
+                      <TableCell>{getRoleBadge(usuario.rol)}</TableCell>
+                      <TableCell>
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          usuario.activo 
+                            ? 'bg-green-100 text-green-800' 
+                            : 'bg-red-100 text-red-800'
+                        }`}>
+                          {usuario.activo ? <UserCheck className="w-3 h-3 mr-1" /> : <UserX className="w-3 h-3 mr-1" />}
+                          {usuario.activo ? 'Activo' : 'Inactivo'}
+                        </span>
                       </TableCell>
                       <TableCell>
                         {new Date(usuario.created_at).toLocaleDateString()}
                       </TableCell>
                       <TableCell>
                         <div className="flex space-x-2">
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            disabled={usuario.id === currentUser.id}
+                          <Select 
+                            value={usuario.rol} 
+                            onValueChange={(value: UserRole) => updateUserRole(usuario.id, value)}
                           >
-                            <Edit className="w-4 h-4" />
+                            <SelectTrigger className="w-32">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="admin">Admin</SelectItem>
+                              <SelectItem value="supervisor">Supervisor</SelectItem>
+                              <SelectItem value="viewer">Viewer</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <Button
+                            variant={usuario.activo ? "destructive" : "default"}
+                            size="sm"
+                            onClick={() => toggleUserStatus(usuario.id, !usuario.activo)}
+                          >
+                            {usuario.activo ? 'Desactivar' : 'Activar'}
                           </Button>
                         </div>
                       </TableCell>
@@ -364,6 +405,12 @@ const GestionUsuarios = () => {
                   ))}
                 </TableBody>
               </Table>
+              
+              {usuarios.length === 0 && (
+                <div className="text-center py-8 text-gray-500">
+                  No hay usuarios registrados
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

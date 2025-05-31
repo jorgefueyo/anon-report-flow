@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/hooks/useSupabase";
 import { useNavigate } from "react-router-dom";
@@ -90,7 +89,68 @@ const GestionDenuncias = () => {
     setLoading(false);
   };
 
+  const sendNotificationEmail = async (
+    type: 'estado_cambio' | 'asignacion',
+    denunciaData: any,
+    estadoAnterior?: string,
+    estadoNuevo?: string,
+    asignadoA?: string
+  ) => {
+    try {
+      // Para estado_cambio, enviar email al denunciante
+      // Para asignacion, enviar email al usuario asignado
+      
+      let recipientEmail = '';
+      let recipientName = '';
+      
+      if (type === 'estado_cambio') {
+        // Aquí normalmente desencriptarías el email del denunciante
+        // Por ahora usamos un email de prueba
+        recipientEmail = 'denunciante@ejemplo.com';
+      } else if (type === 'asignacion' && asignadoA) {
+        // Buscar email del usuario asignado
+        const { data: userData } = await supabase
+          .from('usuarios_backoffice')
+          .select('email, nombre')
+          .eq('id', asignadoA)
+          .single();
+        
+        if (userData) {
+          recipientEmail = userData.email;
+          recipientName = userData.nombre;
+        }
+      }
+      
+      if (!recipientEmail) return;
+      
+      const response = await supabase.functions.invoke('send-notification-email', {
+        body: {
+          type,
+          recipientEmail,
+          recipientName,
+          denunciaCode: denunciaData.codigo_seguimiento,
+          estadoAnterior,
+          estadoNuevo,
+          asignadoA: recipientName,
+          empresaNombre: 'Empresa Demo'
+        }
+      });
+      
+      if (response.error) {
+        console.error('Error sending email:', response.error);
+      } else {
+        console.log('Email sent successfully');
+      }
+    } catch (error) {
+      console.error('Error in sendNotificationEmail:', error);
+    }
+  };
+
   const updateEstado = async (denunciaId: string, nuevoEstado: EstadoDenuncia, asignadoA?: string) => {
+    // Obtener estado anterior
+    const denunciaActual = denuncias.find(d => d.id === denunciaId);
+    const estadoAnterior = denunciaActual?.estado;
+
     const { error } = await supabase
       .from('denuncias')
       .update({ 
@@ -106,6 +166,27 @@ const GestionDenuncias = () => {
         variant: "destructive",
       });
       return;
+    }
+
+    // Enviar notificación por email
+    if (denunciaActual) {
+      await sendNotificationEmail(
+        'estado_cambio',
+        denunciaActual,
+        estadoAnterior,
+        nuevoEstado
+      );
+      
+      // Si se asigna a alguien, también enviar notificación de asignación
+      if (asignadoA && nuevoEstado === 'asignada') {
+        await sendNotificationEmail(
+          'asignacion',
+          denunciaActual,
+          undefined,
+          undefined,
+          asignadoA
+        );
+      }
     }
 
     toast({
