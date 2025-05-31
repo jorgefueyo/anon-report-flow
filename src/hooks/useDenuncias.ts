@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -33,7 +32,7 @@ export const useDenuncias = () => {
 
       const empresa_id = empresas[0].id;
 
-      // Preparar datos para inserción - codigo_seguimiento se genera automáticamente en la BD
+      // Preparar datos para inserción
       const datosInsercion = {
         empresa_id,
         email_encriptado: encryptData(datos.email),

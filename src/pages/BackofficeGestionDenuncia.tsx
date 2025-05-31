@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -62,7 +61,7 @@ const BackofficeGestionDenuncia = () => {
   const [loading, setLoading] = useState(true);
   const [guardando, setGuardando] = useState(false);
   const [nuevoEstado, setNuevoEstado] = useState<'pendiente' | 'en_proceso' | 'finalizada'>('pendiente');
-  const [administradorAsignado, setAdministradorAsignado] = useState<string>("");
+  const [administradorAsignado, setAdministradorAsignado] = useState<string>("unassigned");
   const [observaciones, setObservaciones] = useState("");
   const [accionesRealizadas, setAccionesRealizadas] = useState("");
   const navigate = useNavigate();
@@ -115,7 +114,7 @@ const BackofficeGestionDenuncia = () => {
 
       setDenuncia(denunciaData);
       setNuevoEstado(denunciaData.estado);
-      setAdministradorAsignado(denunciaData.asignado_a || "");
+      setAdministradorAsignado(denunciaData.asignado_a || "unassigned");
 
       // Cargar seguimientos
       const { data: seguimientosData, error: seguimientosError } = await supabase
@@ -197,15 +196,16 @@ const BackofficeGestionDenuncia = () => {
 
       const estadoAnterior = denuncia.estado;
       const asignadoAnterior = denuncia.asignado_a;
+      const nuevoAsignadoId = administradorAsignado === "unassigned" ? null : administradorAsignado;
       const cambioEstado = estadoAnterior !== nuevoEstado;
-      const cambioAsignacion = asignadoAnterior !== administradorAsignado;
+      const cambioAsignacion = asignadoAnterior !== nuevoAsignadoId;
 
       // Actualizar denuncia
       const { error: updateError } = await supabase
         .from('denuncias')
         .update({
           estado: nuevoEstado,
-          asignado_a: administradorAsignado || null,
+          asignado_a: nuevoAsignadoId,
           observaciones_internas: observaciones.trim() || denuncia.observaciones_internas,
         })
         .eq('id', denuncia.id);
@@ -524,7 +524,7 @@ const BackofficeGestionDenuncia = () => {
                           <SelectValue placeholder="Seleccionar administrador" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Sin asignar</SelectItem>
+                          <SelectItem value="unassigned">Sin asignar</SelectItem>
                           {administradores.map((admin) => (
                             <SelectItem key={admin.id} value={admin.id}>
                               {admin.nombre} ({admin.email})
