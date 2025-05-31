@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -194,9 +195,11 @@ const BackofficeGestionDenuncia = () => {
 
     try {
       setGuardando(true);
-      console.log('Actualizando denuncia...');
+      console.log('Iniciando actualización de denuncia...');
       console.log('Estado actual:', denuncia.estado);
       console.log('Nuevo estado:', nuevoEstado);
+      console.log('Administrador actual:', denuncia.asignado_a);
+      console.log('Nuevo administrador:', administradorAsignado);
 
       const estadoAnterior = denuncia.estado;
       const asignadoAnterior = denuncia.asignado_a;
@@ -204,10 +207,11 @@ const BackofficeGestionDenuncia = () => {
       const cambioEstado = estadoAnterior !== nuevoEstado;
       const cambioAsignacion = asignadoAnterior !== nuevoAsignadoId;
 
-      // Actualizar denuncia con los nuevos valores
+      // Preparar datos de actualización
       const updateData: any = {
         estado: nuevoEstado,
         asignado_a: nuevoAsignadoId,
+        updated_at: new Date().toISOString()
       };
 
       // Solo agregar observaciones_internas si hay contenido
@@ -215,7 +219,7 @@ const BackofficeGestionDenuncia = () => {
         updateData.observaciones_internas = observaciones.trim();
       }
 
-      console.log('Datos de actualización:', updateData);
+      console.log('Datos para actualizar:', updateData);
 
       // ACTUALIZAR LA DENUNCIA EN LA BASE DE DATOS
       const { data: updatedDenuncia, error: updateError } = await supabase
@@ -229,19 +233,30 @@ const BackofficeGestionDenuncia = () => {
         console.error('Error actualizando denuncia:', updateError);
         toast({
           title: "Error",
-          description: "No se pudo actualizar la denuncia",
+          description: `No se pudo actualizar la denuncia: ${updateError.message}`,
           variant: "destructive",
         });
         return;
       }
 
-      console.log('Denuncia actualizada exitosamente en la base de datos:', updatedDenuncia);
+      if (!updatedDenuncia) {
+        console.error('No se recibieron datos de la denuncia actualizada');
+        toast({
+          title: "Error",
+          description: "No se pudo confirmar la actualización de la denuncia",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      console.log('Denuncia actualizada exitosamente:', updatedDenuncia);
 
       // Actualizar el estado local inmediatamente
       setDenuncia(updatedDenuncia);
 
       // Subir nuevos archivos si existen
       if (nuevosArchivos.length > 0) {
+        console.log('Subiendo nuevos archivos...');
         await subirNuevosArchivos(denuncia.id, nuevosArchivos);
         setNuevosArchivos([]);
       }
@@ -307,6 +322,7 @@ const BackofficeGestionDenuncia = () => {
       // Enviar notificación por email si cambió el estado
       if (cambioEstado) {
         try {
+          console.log('Enviando notificación por email...');
           // Desencriptar el email del denunciante
           const emailDenunciante = decryptData(denuncia.email_encriptado);
           
@@ -343,10 +359,10 @@ const BackofficeGestionDenuncia = () => {
       setObservaciones("");
 
     } catch (error) {
-      console.error('Error:', error);
+      console.error('Error completo:', error);
       toast({
         title: "Error",
-        description: "Error inesperado al actualizar",
+        description: `Error inesperado al actualizar: ${error instanceof Error ? error.message : 'Error desconocido'}`,
         variant: "destructive",
       });
     } finally {
