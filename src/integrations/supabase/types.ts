@@ -257,7 +257,7 @@ export type Database = {
             foreignKeyName: "seguimiento_denuncias_usuario_id_fkey"
             columns: ["usuario_id"]
             isOneToOne: false
-            referencedRelation: "usuarios_backoffice"
+            referencedRelation: "administradores"
             referencedColumns: ["id"]
           },
         ]

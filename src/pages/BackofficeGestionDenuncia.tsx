@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -274,6 +273,11 @@ const BackofficeGestionDenuncia = () => {
 
         if (seguimientoError) {
           console.error('Error creando seguimiento:', seguimientoError);
+          toast({
+            title: "Advertencia",
+            description: "La denuncia se actualizó pero no se pudo guardar el seguimiento",
+            variant: "destructive",
+          });
         } else {
           console.log('Seguimiento creado exitosamente');
         }
