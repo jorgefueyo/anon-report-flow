@@ -188,36 +188,27 @@ export type Database = {
           updated_at?: string;
         };
       };
-      usuarios_backoffice: {
+      administradores: {
         Row: {
           id: string;
-          auth_user_id: string | null;
-          empresa_id: string;
           email: string;
           nombre: string;
-          rol: string;
           activo: boolean;
           created_at: string;
           updated_at: string;
         };
         Insert: {
           id?: string;
-          auth_user_id?: string | null;
-          empresa_id: string;
           email: string;
           nombre: string;
-          rol?: string;
           activo?: boolean;
           created_at?: string;
           updated_at?: string;
         };
         Update: {
           id?: string;
-          auth_user_id?: string | null;
-          empresa_id?: string;
           email?: string;
           nombre?: string;
-          rol?: string;
           activo?: boolean;
           created_at?: string;
           updated_at?: string;

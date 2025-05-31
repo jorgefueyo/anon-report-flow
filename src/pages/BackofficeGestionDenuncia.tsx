@@ -237,9 +237,22 @@ const BackofficeGestionDenuncia = () => {
           operacion = 'Cambio de asignación';
         }
 
+        // Buscar el ID del administrador en la tabla administradores
+        const { data: adminFromDB, error: adminError } = await supabase
+          .from('administradores')
+          .select('id')
+          .eq('email', admin.email)
+          .single();
+
+        if (adminError) {
+          console.error('Error buscando administrador:', adminError);
+        }
+
+        const usuarioId = adminFromDB?.id || null;
+
         console.log('Creando seguimiento con datos:', {
           denuncia_id: denuncia.id,
-          usuario_id: admin.id,
+          usuario_id: usuarioId,
           estado_anterior: estadoAnterior,
           estado_nuevo: nuevoEstado,
           operacion: operacion,
@@ -251,7 +264,7 @@ const BackofficeGestionDenuncia = () => {
           .from('seguimiento_denuncias')
           .insert({
             denuncia_id: denuncia.id,
-            usuario_id: admin.id,
+            usuario_id: usuarioId,
             estado_anterior: estadoAnterior,
             estado_nuevo: nuevoEstado,
             operacion: operacion,
