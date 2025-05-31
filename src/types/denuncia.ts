@@ -14,7 +14,7 @@ export interface Denuncia {
   lugar_hechos?: string | null;
   testigos?: string | null;
   personas_implicadas?: string | null;
-  estado: 'pendiente' | 'en_proceso' | 'finalizada';
+  estado: string; // Cambiado de union type a string
   asignado_a?: string | null;
   observaciones_internas?: string | null;
   created_at: string;

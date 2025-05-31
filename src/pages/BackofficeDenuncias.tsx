@@ -4,7 +4,6 @@ import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -20,8 +19,7 @@ import {
 } from "@/components/ui/sidebar";
 import { 
   Search,
-  Eye,
-  Filter
+  Eye
 } from "lucide-react";
 import BackofficeSidebar from "@/components/BackofficeSidebar";
 import BackofficeHeader from "@/components/BackofficeHeader";
@@ -39,7 +37,7 @@ interface DenunciaResumen {
   id: string;
   codigo_seguimiento: string;
   email_encriptado: string;
-  estado: 'pendiente' | 'en_proceso' | 'finalizada';
+  estado: string; // Cambiado de union type a string
   categoria: string | null;
   created_at: string;
   hechos: string;
@@ -93,7 +91,8 @@ const BackofficeDenuncias = () => {
       }
 
       console.log('Denuncias cargadas:', data);
-      setDenuncias(data || []);
+      // Cast para asegurar compatibilidad de tipos
+      setDenuncias((data || []) as DenunciaResumen[]);
     } catch (error) {
       console.error('Error:', error);
       toast({
@@ -265,7 +264,7 @@ const BackofficeDenuncias = () => {
                               {denuncia.categoria || 'Sin categoría'}
                             </TableCell>
                             <TableCell>
-                              <EstadoBadge estado={denuncia.estado} />
+                              <EstadoBadge estado={denuncia.estado as 'pendiente' | 'en_proceso' | 'finalizada'} />
                             </TableCell>
                             <TableCell>
                               {new Date(denuncia.created_at).toLocaleDateString('es-ES')}

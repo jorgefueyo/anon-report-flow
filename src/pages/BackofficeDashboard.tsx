@@ -6,23 +6,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
   SidebarProvider,
-  SidebarInset,
-  Sidebar,
-  SidebarContent,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuItem,
-  SidebarMenuButton,
-  SidebarTrigger
+  SidebarInset
 } from "@/components/ui/sidebar";
 import { 
-  Building2, 
   FileText, 
-  Settings, 
-  LogOut, 
-  Users, 
-  BarChart3 
+  Building2
 } from "lucide-react";
+import BackofficeSidebar from "@/components/BackofficeSidebar";
+import BackofficeHeader from "@/components/BackofficeHeader";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Admin {
   id: string;
@@ -30,8 +22,22 @@ interface Admin {
   nombre: string;
 }
 
+interface DenunciaStats {
+  total: number;
+  pendientes: number;
+  en_proceso: number;
+  finalizadas: number;
+}
+
 const BackofficeDashboard = () => {
   const [admin, setAdmin] = useState<Admin | null>(null);
+  const [stats, setStats] = useState<DenunciaStats>({
+    total: 0,
+    pendientes: 0,
+    en_proceso: 0,
+    finalizadas: 0
+  });
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -46,19 +52,37 @@ const BackofficeDashboard = () => {
     try {
       const parsedAdmin = JSON.parse(adminData);
       setAdmin(parsedAdmin);
+      cargarEstadisticas();
     } catch (error) {
       console.error('Error parsing admin data:', error);
       navigate('/backoffice/login');
     }
   }, [navigate]);
 
-  const handleLogout = () => {
-    localStorage.removeItem('backoffice_admin');
-    toast({
-      title: "Sesión cerrada",
-      description: "Has cerrado sesión correctamente",
-    });
-    navigate('/backoffice/login');
+  const cargarEstadisticas = async () => {
+    try {
+      setLoading(true);
+      
+      const { data: denuncias, error } = await supabase
+        .from('denuncias')
+        .select('estado');
+
+      if (error) {
+        console.error('Error cargando estadísticas:', error);
+        return;
+      }
+
+      const total = denuncias?.length || 0;
+      const pendientes = denuncias?.filter(d => d.estado === 'pendiente').length || 0;
+      const en_proceso = denuncias?.filter(d => d.estado === 'en_proceso').length || 0;
+      const finalizadas = denuncias?.filter(d => d.estado === 'finalizada').length || 0;
+
+      setStats({ total, pendientes, en_proceso, finalizadas });
+    } catch (error) {
+      console.error('Error:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (!admin) {
@@ -72,73 +96,10 @@ const BackofficeDashboard = () => {
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
-        <Sidebar>
-          <SidebarHeader className="p-4">
-            <div className="flex items-center space-x-2">
-              <Building2 className="w-8 h-8 text-blue-600" />
-              <div>
-                <h2 className="text-lg font-bold">Backoffice</h2>
-                <p className="text-sm text-gray-600">{admin.nombre}</p>
-              </div>
-            </div>
-          </SidebarHeader>
-          
-          <SidebarContent>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton 
-                  onClick={() => navigate('/backoffice')}
-                  className="w-full"
-                >
-                  <BarChart3 className="w-4 h-4" />
-                  Dashboard
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              
-              <SidebarMenuItem>
-                <SidebarMenuButton 
-                  onClick={() => navigate('/backoffice/denuncias')}
-                  className="w-full"
-                >
-                  <FileText className="w-4 h-4" />
-                  Denuncias
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              
-              <SidebarMenuItem>
-                <SidebarMenuButton 
-                  onClick={() => navigate('/backoffice/empresa')}
-                  className="w-full"
-                >
-                  <Building2 className="w-4 h-4" />
-                  Configurar Empresa
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              
-              <SidebarMenuItem>
-                <SidebarMenuButton 
-                  onClick={() => navigate('/backoffice/admin')}
-                  className="w-full"
-                >
-                  <Users className="w-4 h-4" />
-                  Admin. Sistema
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarContent>
-        </Sidebar>
-
+        <BackofficeSidebar admin={admin} activeItem="dashboard" />
+        
         <SidebarInset>
-          <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
-            <SidebarTrigger className="-ml-1" />
-            <div className="ml-auto flex items-center space-x-4">
-              <span className="text-sm text-gray-600">Bienvenido, {admin.nombre}</span>
-              <Button variant="outline" size="sm" onClick={handleLogout}>
-                <LogOut className="w-4 h-4 mr-2" />
-                Cerrar Sesión
-              </Button>
-            </div>
-          </header>
+          <BackofficeHeader admin={admin} />
 
           <div className="flex-1 p-6">
             <div className="max-w-7xl mx-auto">
@@ -146,7 +107,19 @@ const BackofficeDashboard = () => {
                 Dashboard Principal
               </h1>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium text-gray-600">
+                      Total Denuncias
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-gray-800">{stats.total}</div>
+                    <p className="text-sm text-gray-500">Registradas en total</p>
+                  </CardContent>
+                </Card>
+
                 <Card>
                   <CardHeader className="pb-3">
                     <CardTitle className="text-sm font-medium text-gray-600">
@@ -154,7 +127,7 @@ const BackofficeDashboard = () => {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold text-blue-600">0</div>
+                    <div className="text-2xl font-bold text-blue-600">{stats.pendientes}</div>
                     <p className="text-sm text-gray-500">En espera de revisión</p>
                   </CardContent>
                 </Card>
@@ -166,7 +139,7 @@ const BackofficeDashboard = () => {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold text-yellow-600">0</div>
+                    <div className="text-2xl font-bold text-yellow-600">{stats.en_proceso}</div>
                     <p className="text-sm text-gray-500">Siendo investigadas</p>
                   </CardContent>
                 </Card>
@@ -178,7 +151,7 @@ const BackofficeDashboard = () => {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold text-green-600">0</div>
+                    <div className="text-2xl font-bold text-green-600">{stats.finalizadas}</div>
                     <p className="text-sm text-gray-500">Casos resueltos</p>
                   </CardContent>
                 </Card>

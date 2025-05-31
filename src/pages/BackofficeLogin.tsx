@@ -67,7 +67,7 @@ const BackofficeLogin = () => {
         description: `Bienvenido, ${adminData.nombre}`,
       });
 
-      navigate('/backoffice/dashboard');
+      navigate('/backoffice');
 
     } catch (error) {
       console.error('Error durante login:', error);
