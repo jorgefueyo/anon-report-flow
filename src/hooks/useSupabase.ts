@@ -113,7 +113,7 @@ export type Database = {
           lugar_hechos: string | null;
           testigos: string | null;
           personas_implicadas: string | null;
-          estado: 'pendiente' | 'asignada' | 'en_tramite' | 'finalizada';
+          estado: 'pendiente' | 'en_proceso' | 'finalizada';
           asignado_a: string | null;
           observaciones_internas: string | null;
           created_at: string;
@@ -134,7 +134,7 @@ export type Database = {
           lugar_hechos?: string | null;
           testigos?: string | null;
           personas_implicadas?: string | null;
-          estado?: 'pendiente' | 'asignada' | 'en_tramite' | 'finalizada';
+          estado?: 'pendiente' | 'en_proceso' | 'finalizada';
           asignado_a?: string | null;
           observaciones_internas?: string | null;
           created_at?: string;
@@ -155,7 +155,7 @@ export type Database = {
           lugar_hechos?: string | null;
           testigos?: string | null;
           personas_implicadas?: string | null;
-          estado?: 'pendiente' | 'asignada' | 'en_tramite' | 'finalizada';
+          estado?: 'pendiente' | 'en_proceso' | 'finalizada';
           asignado_a?: string | null;
           observaciones_internas?: string | null;
           created_at?: string;
