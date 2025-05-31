@@ -53,19 +53,19 @@ const SetupAdmin = () => {
         return;
       }
 
-      // Crear usuario administrador en auth
-      const { data: authData, error: authError } = await supabase.auth.signUp({
+      // Crear usuario administrador en auth con email ya confirmado
+      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
         email: 'info@zerotek.es',
         password: 'admin1234',
-        options: {
-          data: { 
-            force_password_reset: true,
-            nombre: 'Administrador Zerotek'
-          }
+        email_confirm: true, // Confirmar email automáticamente
+        user_metadata: { 
+          nombre: 'Administrador Zerotek',
+          force_password_reset: true
         }
       });
 
       if (authError) {
+        console.error('Error al crear usuario:', authError);
         toast({
           title: "Error al crear usuario",
           description: authError.message,
