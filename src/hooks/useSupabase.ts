@@ -17,6 +17,11 @@ export type Database = {
           logo_url: string | null;
           color_primario: string;
           color_secundario: string;
+          configurada: boolean | null;
+          codigo_postal: string | null;
+          ciudad: string | null;
+          provincia: string | null;
+          pais: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -30,6 +35,11 @@ export type Database = {
           logo_url?: string | null;
           color_primario?: string;
           color_secundario?: string;
+          configurada?: boolean | null;
+          codigo_postal?: string | null;
+          ciudad?: string | null;
+          provincia?: string | null;
+          pais?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -43,6 +53,11 @@ export type Database = {
           logo_url?: string | null;
           color_primario?: string;
           color_secundario?: string;
+          configurada?: boolean | null;
+          codigo_postal?: string | null;
+          ciudad?: string | null;
+          provincia?: string | null;
+          pais?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -54,7 +69,7 @@ export type Database = {
           empresa_id: string;
           email: string;
           nombre: string;
-          rol: 'admin' | 'supervisor' | 'viewer';
+          rol: string;
           activo: boolean;
           created_at: string;
           updated_at: string;
@@ -65,7 +80,7 @@ export type Database = {
           empresa_id: string;
           email: string;
           nombre: string;
-          rol?: 'admin' | 'supervisor' | 'viewer';
+          rol?: string;
           activo?: boolean;
           created_at?: string;
           updated_at?: string;
@@ -76,7 +91,7 @@ export type Database = {
           empresa_id?: string;
           email?: string;
           nombre?: string;
-          rol?: 'admin' | 'supervisor' | 'viewer';
+          rol?: string;
           activo?: boolean;
           created_at?: string;
           updated_at?: string;
@@ -145,6 +160,44 @@ export type Database = {
           observaciones_internas?: string | null;
           created_at?: string;
           updated_at?: string;
+        };
+      };
+      seguimiento_denuncias: {
+        Row: {
+          id: string;
+          denuncia_id: string;
+          usuario_id: string | null;
+          fecha: string;
+          estado_anterior: string | null;
+          estado_nuevo: string;
+          operacion: string;
+          acciones_realizadas: string | null;
+          observaciones: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          denuncia_id: string;
+          usuario_id?: string | null;
+          fecha?: string;
+          estado_anterior?: string | null;
+          estado_nuevo: string;
+          operacion: string;
+          acciones_realizadas?: string | null;
+          observaciones?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          denuncia_id?: string;
+          usuario_id?: string | null;
+          fecha?: string;
+          estado_anterior?: string | null;
+          estado_nuevo?: string;
+          operacion?: string;
+          acciones_realizadas?: string | null;
+          observaciones?: string | null;
+          created_at?: string;
         };
       };
     };

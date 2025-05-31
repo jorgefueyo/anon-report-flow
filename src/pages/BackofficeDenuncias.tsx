@@ -23,14 +23,15 @@ import {
   LogOut, 
   Users, 
   BarChart3,
-  ArrowLeft
+  ArrowLeft,
+  Eye
 } from "lucide-react";
 
 interface Denuncia {
   id: string;
   codigo_seguimiento: string;
   categoria: string | null;
-  estado: 'pendiente' | 'en_proceso' | 'finalizada';
+  estado: 'pendiente' | 'asignada' | 'en_tramite' | 'finalizada';
   created_at: string;
   hechos: string;
 }
@@ -94,8 +95,10 @@ const BackofficeDenuncias = () => {
     switch (estado) {
       case 'pendiente':
         return <Badge variant="secondary">Pendiente</Badge>;
-      case 'en_proceso':
-        return <Badge variant="default">En Proceso</Badge>;
+      case 'asignada':
+        return <Badge className="bg-blue-100 text-blue-800">Asignada</Badge>;
+      case 'en_tramite':
+        return <Badge className="bg-orange-100 text-orange-800">En Trámite</Badge>;
       case 'finalizada':
         return <Badge variant="outline">Finalizada</Badge>;
       default:
@@ -234,9 +237,12 @@ const BackofficeDenuncias = () => {
                           {denuncia.hechos.length > 200 && '...'}
                         </p>
                         <div className="flex space-x-2">
-                          <Button size="sm">Ver Detalles</Button>
-                          <Button size="sm" variant="outline">
-                            Cambiar Estado
+                          <Button 
+                            size="sm" 
+                            onClick={() => navigate(`/backoffice/denuncias/${denuncia.id}`)}
+                          >
+                            <Eye className="w-4 h-4 mr-2" />
+                            Ver Detalles
                           </Button>
                         </div>
                       </CardContent>

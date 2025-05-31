@@ -170,6 +170,104 @@ export type Database = {
         }
         Relationships: []
       }
+      seguimiento_denuncias: {
+        Row: {
+          acciones_realizadas: string | null
+          created_at: string
+          denuncia_id: string
+          estado_anterior: string | null
+          estado_nuevo: string
+          fecha: string
+          id: string
+          observaciones: string | null
+          operacion: string
+          usuario_id: string | null
+        }
+        Insert: {
+          acciones_realizadas?: string | null
+          created_at?: string
+          denuncia_id: string
+          estado_anterior?: string | null
+          estado_nuevo: string
+          fecha?: string
+          id?: string
+          observaciones?: string | null
+          operacion: string
+          usuario_id?: string | null
+        }
+        Update: {
+          acciones_realizadas?: string | null
+          created_at?: string
+          denuncia_id?: string
+          estado_anterior?: string | null
+          estado_nuevo?: string
+          fecha?: string
+          id?: string
+          observaciones?: string | null
+          operacion?: string
+          usuario_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seguimiento_denuncias_denuncia_id_fkey"
+            columns: ["denuncia_id"]
+            isOneToOne: false
+            referencedRelation: "denuncias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "seguimiento_denuncias_usuario_id_fkey"
+            columns: ["usuario_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios_backoffice"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      usuarios_backoffice: {
+        Row: {
+          activo: boolean | null
+          auth_user_id: string | null
+          created_at: string
+          email: string
+          empresa_id: string
+          id: string
+          nombre: string
+          rol: string
+          updated_at: string
+        }
+        Insert: {
+          activo?: boolean | null
+          auth_user_id?: string | null
+          created_at?: string
+          email: string
+          empresa_id: string
+          id?: string
+          nombre: string
+          rol?: string
+          updated_at?: string
+        }
+        Update: {
+          activo?: boolean | null
+          auth_user_id?: string | null
+          created_at?: string
+          email?: string
+          empresa_id?: string
+          id?: string
+          nombre?: string
+          rol?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "usuarios_backoffice_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
