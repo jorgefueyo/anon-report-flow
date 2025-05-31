@@ -36,11 +36,11 @@ export const useEmpresa = () => {
         }
 
         if (data) {
-          // Asegurar que logo_url esté incluido
+          // Asegurar que logo_url esté incluido usando type assertion
           setEmpresa({
             ...data,
-            logo_url: data.logo_url || null
-          });
+            logo_url: (data as any).logo_url || null
+          } as Empresa);
         }
       } catch (error) {
         console.error('Error loading empresa:', error);
@@ -137,8 +137,8 @@ export const useEmpresa = () => {
       // Actualizar el estado local asegurando que logo_url esté incluido
       setEmpresa({
         ...data,
-        logo_url: data.logo_url || null
-      });
+        logo_url: (data as any).logo_url || null
+      } as Empresa);
       return { success: true };
     } catch (error) {
       console.error('Error updating empresa:', error);

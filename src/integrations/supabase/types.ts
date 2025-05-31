@@ -129,6 +129,7 @@ export type Database = {
           direccion: string | null
           email: string | null
           id: string
+          logo_url: string | null
           nombre: string
           pais: string | null
           provincia: string | null
@@ -144,6 +145,7 @@ export type Database = {
           direccion?: string | null
           email?: string | null
           id?: string
+          logo_url?: string | null
           nombre: string
           pais?: string | null
           provincia?: string | null
@@ -159,6 +161,7 @@ export type Database = {
           direccion?: string | null
           email?: string | null
           id?: string
+          logo_url?: string | null
           nombre?: string
           pais?: string | null
           provincia?: string | null
