@@ -31,6 +31,7 @@ import {
   ArrowLeft
 } from "lucide-react";
 import HistorialSeguimiento from "@/components/HistorialSeguimiento";
+import GestionarDenuncia from "@/components/GestionarDenuncia";
 
 interface Admin {
   id: string;
@@ -104,6 +105,10 @@ const BackofficeGestionDenuncia = () => {
       description: "Has cerrado sesión correctamente",
     });
     navigate('/backoffice/login');
+  };
+
+  const handleDenunciaActualizada = (denunciaActualizada: Denuncia) => {
+    setDenuncia(denunciaActualizada);
   };
 
   if (!admin || empresaLoading) {
@@ -253,7 +258,11 @@ const BackofficeGestionDenuncia = () => {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   <DenunciaCard denuncia={denuncia} />
 
-                  <div className="lg:col-span-1">
+                  <div className="lg:col-span-1 space-y-6">
+                    <GestionarDenuncia 
+                      denuncia={denuncia} 
+                      onDenunciaActualizada={handleDenunciaActualizada}
+                    />
                     <HistorialSeguimiento denunciaId={denuncia.id} />
                   </div>
                 </div>

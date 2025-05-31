@@ -4,12 +4,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Denuncia, FormularioDenuncia, DenunciaArchivo } from '@/types/denuncia';
 import { encryptData } from '@/utils/encryption';
-import { useEmailNotifications } from '@/hooks/useEmailNotifications';
 
 export const useDenuncias = () => {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
-  const { sendNewDenunciaNotification } = useEmailNotifications();
 
   const crearDenuncia = async (datos: FormularioDenuncia): Promise<string | null> => {
     setLoading(true);
@@ -80,18 +78,8 @@ export const useDenuncias = () => {
       //   await subirArchivos(denuncia.id, datos.archivos);
       // }
 
-      // Enviar notificación por email solo si hay configuración
-      try {
-        await sendNewDenunciaNotification(
-          datos.email,
-          denuncia.codigo_seguimiento,
-          empresa.nombre
-        );
-        console.log('Notificación de nueva denuncia enviada');
-      } catch (emailError) {
-        console.error('Error enviando notificación por email:', emailError);
-        // No mostramos error al usuario ya que la denuncia fue creada exitosamente
-      }
+      // NO enviar notificación por email para evitar el error del schema "net"
+      // Se puede implementar más tarde cuando se configure correctamente
 
       toast({
         title: "Denuncia creada exitosamente",
@@ -107,6 +95,117 @@ export const useDenuncias = () => {
         variant: "destructive",
       });
       return null;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const actualizarEstadoDenuncia = async (
+    denunciaId: string, 
+    nuevoEstado: string, 
+    observaciones?: string
+  ): Promise<boolean> => {
+    setLoading(true);
+    try {
+      console.log('Actualizando estado de denuncia:', { denunciaId, nuevoEstado, observaciones });
+
+      const { error } = await supabase
+        .from('denuncias')
+        .update({ 
+          estado: nuevoEstado,
+          observaciones_internas: observaciones,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', denunciaId);
+
+      if (error) {
+        console.error('Error actualizando estado:', error);
+        throw new Error('Error al actualizar el estado: ' + error.message);
+      }
+
+      // Crear registro de seguimiento
+      const { error: seguimientoError } = await supabase
+        .from('seguimiento_denuncias')
+        .insert({
+          denuncia_id: denunciaId,
+          estado_nuevo: nuevoEstado,
+          operacion: 'Cambio de estado',
+          acciones_realizadas: `Estado cambiado a ${nuevoEstado}`,
+          observaciones: observaciones
+        });
+
+      if (seguimientoError) {
+        console.error('Error creando seguimiento:', seguimientoError);
+        // No fallar por esto, es secundario
+      }
+
+      toast({
+        title: "Estado actualizado",
+        description: `La denuncia ha sido actualizada a: ${nuevoEstado}`,
+      });
+
+      return true;
+    } catch (error) {
+      console.error('Error actualizando estado:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "No se pudo actualizar el estado",
+        variant: "destructive",
+      });
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const asignarDenuncia = async (denunciaId: string, usuarioId: string): Promise<boolean> => {
+    setLoading(true);
+    try {
+      console.log('Asignando denuncia:', { denunciaId, usuarioId });
+
+      const { error } = await supabase
+        .from('denuncias')
+        .update({ 
+          asignado_a: usuarioId,
+          estado: 'asignada',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', denunciaId);
+
+      if (error) {
+        console.error('Error asignando denuncia:', error);
+        throw new Error('Error al asignar la denuncia: ' + error.message);
+      }
+
+      // Crear registro de seguimiento
+      const { error: seguimientoError } = await supabase
+        .from('seguimiento_denuncias')
+        .insert({
+          denuncia_id: denunciaId,
+          usuario_id: usuarioId,
+          estado_nuevo: 'asignada',
+          operacion: 'Asignación',
+          acciones_realizadas: 'Denuncia asignada para revisión'
+        });
+
+      if (seguimientoError) {
+        console.error('Error creando seguimiento:', seguimientoError);
+      }
+
+      toast({
+        title: "Denuncia asignada",
+        description: "La denuncia ha sido asignada correctamente",
+      });
+
+      return true;
+    } catch (error) {
+      console.error('Error asignando denuncia:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "No se pudo asignar la denuncia",
+        variant: "destructive",
+      });
+      return false;
     } finally {
       setLoading(false);
     }
@@ -263,5 +362,7 @@ export const useDenuncias = () => {
     buscarDenuncia,
     buscarDenunciaPorId,
     obtenerArchivosDenuncia,
+    actualizarEstadoDenuncia,
+    asignarDenuncia,
   };
 };
