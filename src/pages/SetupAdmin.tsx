@@ -22,6 +22,49 @@ const SetupAdmin = () => {
     setLoading(true);
 
     try {
+      // Verificar si ya existe la empresa demo, si no crearla
+      let { data: empresa, error: empresaError } = await supabase
+        .from('empresas')
+        .select('*')
+        .eq('cif', '12345678A')
+        .maybeSingle();
+
+      if (empresaError) {
+        console.error('Error al buscar empresa:', empresaError);
+        toast({
+          title: "Error",
+          description: "Error al verificar la empresa demo",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Si no existe la empresa demo, crearla
+      if (!empresa) {
+        const { data: nuevaEmpresa, error: crearEmpresaError } = await supabase
+          .from('empresas')
+          .insert({
+            nombre: 'Empresa Demo',
+            cif: '12345678A',
+            email: 'demo@empresa.com',
+            direccion: 'Calle Demo 123, Madrid'
+          })
+          .select()
+          .single();
+
+        if (crearEmpresaError) {
+          console.error('Error al crear empresa:', crearEmpresaError);
+          toast({
+            title: "Error",
+            description: "No se pudo crear la empresa demo",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        empresa = nuevaEmpresa;
+      }
+
       // 1. Crear usuario en auth
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
@@ -46,23 +89,7 @@ const SetupAdmin = () => {
         return;
       }
 
-      // 2. Obtener la empresa demo que se creó por defecto
-      const { data: empresa, error: empresaError } = await supabase
-        .from('empresas')
-        .select('*')
-        .eq('cif', '12345678A')
-        .single();
-
-      if (empresaError || !empresa) {
-        toast({
-          title: "Error",
-          description: "No se encontró la empresa demo",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // 3. Crear registro en usuarios_backoffice con rol admin
+      // 2. Crear registro en usuarios_backoffice con rol admin
       const { error: userError } = await supabase
         .from('usuarios_backoffice')
         .insert({
@@ -75,6 +102,7 @@ const SetupAdmin = () => {
         });
 
       if (userError) {
+        console.error('Error al crear usuario backoffice:', userError);
         toast({
           title: "Error al crear usuario del backoffice",
           description: userError.message,
