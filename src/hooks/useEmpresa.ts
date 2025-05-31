@@ -24,6 +24,7 @@ export const useEmpresa = () => {
   useEffect(() => {
     const loadEmpresa = async () => {
       try {
+        console.log('Loading empresa data...');
         const { data, error } = await supabase
           .from('empresas')
           .select('*')
@@ -36,11 +37,8 @@ export const useEmpresa = () => {
         }
 
         if (data) {
-          // Asegurar que logo_url esté incluido usando type assertion
-          setEmpresa({
-            ...data,
-            logo_url: (data as any).logo_url || null
-          } as Empresa);
+          console.log('Empresa data loaded:', data);
+          setEmpresa(data as Empresa);
         }
       } catch (error) {
         console.error('Error loading empresa:', error);
@@ -54,18 +52,24 @@ export const useEmpresa = () => {
 
   const uploadLogo = async (file: File): Promise<string | null> => {
     try {
+      if (!empresa?.id) {
+        console.error('No empresa ID available for logo upload');
+        return null;
+      }
+
       const fileExt = file.name.split('.').pop();
-      const fileName = `${empresa?.id}/logo.${fileExt}`;
+      const fileName = `${empresa.id}/logo-${Date.now()}.${fileExt}`;
       
       console.log('Uploading file:', fileName);
       
       // Eliminar logo anterior si existe
       if (empresa?.logo_url) {
-        const oldPath = empresa.logo_url.split('/').pop();
-        if (oldPath) {
+        const oldFileName = empresa.logo_url.split('/').pop();
+        if (oldFileName) {
+          console.log('Removing old logo:', oldFileName);
           await supabase.storage
             .from('empresa-logos')
-            .remove([`${empresa.id}/${oldPath}`]);
+            .remove([`${empresa.id}/${oldFileName}`]);
         }
       }
 
@@ -94,7 +98,10 @@ export const useEmpresa = () => {
   };
 
   const updateEmpresa = async (updatedData: Partial<Empresa>, logoFile?: File) => {
-    if (!empresa) return { success: false, error: 'No hay empresa cargada' };
+    if (!empresa) {
+      console.error('No empresa loaded for update');
+      return { success: false, error: 'No hay empresa cargada' };
+    }
 
     console.log('Updating empresa with data:', updatedData);
     console.log('Logo file:', logoFile);
@@ -104,10 +111,13 @@ export const useEmpresa = () => {
 
       // Subir logo si se proporciona
       if (logoFile) {
+        console.log('Uploading logo file...');
         const uploadedLogoUrl = await uploadLogo(logoFile);
         if (uploadedLogoUrl) {
           logoUrl = uploadedLogoUrl;
+          console.log('Logo uploaded, new URL:', logoUrl);
         } else {
+          console.error('Failed to upload logo');
           return { success: false, error: 'Error al subir el logo' };
         }
       }
@@ -115,7 +125,8 @@ export const useEmpresa = () => {
       const dataToUpdate = {
         ...updatedData,
         logo_url: logoUrl,
-        configurada: true
+        configurada: true,
+        updated_at: new Date().toISOString()
       };
 
       console.log('Data to update in database:', dataToUpdate);
@@ -134,15 +145,15 @@ export const useEmpresa = () => {
 
       console.log('Updated empresa data:', data);
 
-      // Actualizar el estado local asegurando que logo_url esté incluido
-      setEmpresa({
-        ...data,
-        logo_url: (data as any).logo_url || null
-      } as Empresa);
+      // Actualizar el estado local
+      setEmpresa(data as Empresa);
       return { success: true };
     } catch (error) {
       console.error('Error updating empresa:', error);
-      return { success: false, error: 'Error al actualizar los datos de la empresa' };
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Error al actualizar los datos de la empresa' 
+      };
     }
   };
 

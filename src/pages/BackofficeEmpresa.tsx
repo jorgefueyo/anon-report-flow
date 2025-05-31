@@ -157,6 +157,16 @@ const BackofficeEmpresa = () => {
     console.log('Form submitted with data:', data);
     console.log('Logo file to upload:', logoFile);
     
+    // Validar campos requeridos
+    if (!data.nombre || !data.cif || !data.direccion || !data.codigo_postal || !data.ciudad || !data.provincia) {
+      toast({
+        title: "Error de validación",
+        description: "Por favor completa todos los campos obligatorios",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setSaving(true);
     try {
       const result = await updateEmpresa(data, logoFile || undefined);
@@ -170,13 +180,18 @@ const BackofficeEmpresa = () => {
         // Limpiar el archivo seleccionado
         setLogoFile(null);
       } else {
-        throw new Error(result.error || 'Error al actualizar los datos');
+        console.error('Update failed:', result.error);
+        toast({
+          title: "Error al guardar",
+          description: result.error || "Error desconocido al actualizar los datos",
+          variant: "destructive",
+        });
       }
     } catch (error) {
       console.error('Error saving empresa:', error);
       toast({
         title: "Error",
-        description: "Error al guardar los datos de la empresa",
+        description: "Error inesperado al guardar los datos de la empresa",
         variant: "destructive",
       });
     } finally {
