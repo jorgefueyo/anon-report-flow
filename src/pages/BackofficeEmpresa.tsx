@@ -117,40 +117,40 @@ const BackofficeEmpresa = () => {
   }, [empresa, form]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      
-      console.log('File selected:', file.name, file.type, file.size);
-      
-      // Validar tipo de archivo
-      if (!file.type.startsWith('image/')) {
-        toast({
-          title: "Error",
-          description: "Por favor selecciona un archivo de imagen válido",
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      // Validar tamaño (max 2MB)
-      if (file.size > 2 * 1024 * 1024) {
-        toast({
-          title: "Error",
-          description: "El archivo es demasiado grande. Máximo 2MB",
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      setLogoFile(file);
-      
-      // Crear preview
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setLogoPreview(e.target?.result as string);
-      };
-      reader.readAsDataURL(file);
+    const file = e.target.files?.[0];
+    
+    if (!file) return;
+    
+    console.log('File selected:', file.name, file.type, file.size);
+    
+    // Validar tipo de archivo
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Error",
+        description: "Por favor selecciona un archivo de imagen válido",
+        variant: "destructive",
+      });
+      return;
     }
+    
+    // Validar tamaño (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      toast({
+        title: "Error",
+        description: "El archivo es demasiado grande. Máximo 2MB",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setLogoFile(file);
+    
+    // Crear preview
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setLogoPreview(e.target?.result as string);
+    };
+    reader.readAsDataURL(file);
   };
 
   const onSubmit = async (data: EmpresaFormData) => {
@@ -464,11 +464,13 @@ const BackofficeEmpresa = () => {
                             className="hidden"
                             id="logo-upload"
                           />
-                          <Label htmlFor="logo-upload">
-                            <Button type="button" variant="outline" className="cursor-pointer">
-                              Seleccionar archivo
-                            </Button>
-                          </Label>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => document.getElementById('logo-upload')?.click()}
+                          >
+                            Seleccionar archivo
+                          </Button>
                         </div>
                         <p className="text-xs text-gray-500">
                           * El logo aparecerá en la página principal del canal de denuncias
