@@ -15,33 +15,25 @@ const AppHeader = ({ showButtons = true }: AppHeaderProps) => {
     <header className="bg-white shadow-sm border-b">
       <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
         <div className="flex items-center space-x-3">
-          {empresa?.logo_url ? (
-            <img
-              src={empresa.logo_url}
-              alt={`Logo de ${empresa.nombre}`}
-              className="w-8 h-8 object-contain"
-            />
-          ) : (
-            <Building2 className="w-8 h-8 text-blue-600" />
-          )}
+          <Building2 className="w-8 h-8 text-blue-600" />
           <div>
             <h1 className="text-xl font-semibold text-gray-900">
               Canal de Denuncias
             </h1>
-            {empresa && !loading && (
+            {empresa && !loading && empresa.configurada && (
               <p className="text-sm text-gray-600">{empresa.nombre}</p>
             )}
           </div>
         </div>
         {showButtons && (
           <div className="flex items-center space-x-4">
-            <Link to="/setup-admin">
+            <Link to="/backoffice/cambiar-password">
               <Button variant="outline" size="sm">
                 <UserPlus className="w-4 h-4 mr-2" />
-                Configurar Admin
+                Cambiar Contraseña
               </Button>
             </Link>
-            <Link to="/login">
+            <Link to="/backoffice/login">
               <Button variant="outline" size="sm">
                 <LogIn className="w-4 h-4 mr-2" />
                 Acceso Backoffice

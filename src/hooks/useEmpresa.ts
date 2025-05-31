@@ -5,9 +5,11 @@ import { supabase } from '@/integrations/supabase/client';
 interface Empresa {
   id: string;
   nombre: string;
-  logo_url: string | null;
-  color_primario: string;
-  color_secundario: string;
+  cif: string;
+  direccion: string | null;
+  email: string | null;
+  telefono: string | null;
+  configurada: boolean | null;
 }
 
 export const useEmpresa = () => {
@@ -17,11 +19,10 @@ export const useEmpresa = () => {
   useEffect(() => {
     const loadEmpresa = async () => {
       try {
-        // Por ahora cargamos la empresa demo, en un futuro se podría hacer dinámico
         const { data } = await supabase
           .from('empresas')
-          .select('id, nombre, logo_url, color_primario, color_secundario')
-          .eq('cif', '12345678A')
+          .select('id, nombre, cif, direccion, email, telefono, configurada')
+          .eq('cif', '00000000A')
           .single();
 
         if (data) {
