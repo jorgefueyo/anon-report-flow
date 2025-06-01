@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 import HistorialSeguimiento from "@/components/HistorialSeguimiento";
 import GestionarDenuncia from "@/components/GestionarDenuncia";
+import DenunciaArchivos from "@/components/DenunciaArchivos";
 
 interface Admin {
   id: string;
@@ -157,7 +158,7 @@ const BackofficeGestionDenuncia = () => {
               <Building2 className="w-8 h-8 text-blue-600" />
               <div>
                 <h2 className="text-lg font-bold">Backoffice</h2>
-                <p className="text-sm text-gray-600">{admin.nombre}</p>
+                <p className="text-sm text-gray-600">{admin?.nombre}</p>
               </div>
             </div>
           </SidebarHeader>
@@ -221,7 +222,7 @@ const BackofficeGestionDenuncia = () => {
           <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
             <SidebarTrigger className="-ml-1" />
             <div className="ml-auto flex items-center space-x-4">
-              <span className="text-sm text-gray-600">Bienvenido, {admin.nombre}</span>
+              <span className="text-sm text-gray-600">Bienvenido, {admin?.nombre}</span>
               <Button variant="outline" size="sm" onClick={handleLogout}>
                 <LogOut className="w-4 h-4 mr-2" />
                 Cerrar Sesión
@@ -256,6 +257,7 @@ const BackofficeGestionDenuncia = () => {
               {denuncia && !loading && !error && (
                 <div className="space-y-6">
                   <DenunciaCard denuncia={denuncia} />
+                  <DenunciaArchivos denunciaId={denuncia.id} />
                   <GestionarDenuncia 
                     denuncia={denuncia} 
                     onDenunciaActualizada={handleDenunciaActualizada}

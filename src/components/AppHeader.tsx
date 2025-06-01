@@ -1,5 +1,5 @@
 
-import { Building2, LogIn, UserPlus } from "lucide-react";
+import { Building2, LogIn } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useEmpresa } from "@/hooks/useEmpresa";
@@ -37,16 +37,10 @@ const AppHeader = ({ showButtons = true }: AppHeaderProps) => {
         </div>
         {showButtons && (
           <div className="flex items-center space-x-4">
-            <Link to="/backoffice/cambiar-password">
-              <Button variant="outline" size="sm">
-                <UserPlus className="w-4 h-4 mr-2" />
-                Cambiar Contraseña
-              </Button>
-            </Link>
             <Link to="/backoffice/login">
               <Button variant="outline" size="sm">
                 <LogIn className="w-4 h-4 mr-2" />
-                Acceso Backoffice
+                Acceso Empresa
               </Button>
             </Link>
           </div>
