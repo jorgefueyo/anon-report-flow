@@ -63,26 +63,20 @@ export const useDenuncias = () => {
         const timestamp = Date.now();
         const randomString = Math.random().toString(36).substr(2, 9);
         const extension = archivo.name.split('.').pop() || 'bin';
-        const nombreArchivo = `${denunciaId}/${timestamp}-${randomString}.${extension}`;
+        const nombreArchivo = `denuncia-${denunciaId}/${timestamp}-${randomString}.${extension}`;
         
         console.log('Subiendo archivo como:', nombreArchivo);
 
-        // Subir archivo al storage con configuración específica
+        // Subir archivo al storage
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from('denuncia-archivos')
           .upload(nombreArchivo, archivo, {
             cacheControl: '3600',
-            upsert: false,
-            contentType: archivo.type || 'application/octet-stream'
+            upsert: false
           });
 
         if (uploadError) {
           console.error('Error subiendo archivo al storage:', uploadError);
-          console.error('Detalles del error:', {
-            message: uploadError.message,
-            archivo: archivo.name,
-            ruta: nombreArchivo
-          });
           throw new Error(`Error subiendo ${archivo.name}: ${uploadError.message}`);
         }
 
@@ -92,9 +86,9 @@ export const useDenuncias = () => {
         const datosArchivo = {
           denuncia_id: denunciaId,
           nombre_archivo: archivo.name,
+          ruta_archivo: nombreArchivo,
           tipo_archivo: archivo.type || 'application/octet-stream',
-          tamano_archivo: archivo.size,
-          ruta_archivo: nombreArchivo
+          tamano_archivo: archivo.size
         };
 
         console.log('Guardando referencia en BD:', datosArchivo);
@@ -107,7 +101,6 @@ export const useDenuncias = () => {
 
         if (dbError) {
           console.error('Error guardando referencia del archivo en BD:', dbError);
-          console.error('Datos que se intentaron insertar:', datosArchivo);
           
           // Intentar eliminar el archivo del storage si falló la BD
           try {
@@ -194,8 +187,11 @@ export const useDenuncias = () => {
           console.log('Archivos subidos exitosamente');
         } catch (archivoError) {
           console.error('Error subiendo archivos:', archivoError);
-          // Relanzar el error para que se maneje arriba
-          throw new Error(`La denuncia se creó pero falló la subida de archivos: ${archivoError instanceof Error ? archivoError.message : 'Error desconocido'}`);
+          toast({
+            title: "Advertencia",
+            description: `La denuncia se creó correctamente, pero falló la subida de archivos: ${archivoError instanceof Error ? archivoError.message : 'Error desconocido'}`,
+            variant: "destructive",
+          });
         }
       }
 

@@ -10,8 +10,9 @@ interface DenunciaArchivo {
   id: string;
   nombre_archivo: string;
   tipo_archivo: string;
-  tamano_archivo: number;
+  tamano_archivo: number | null;
   ruta_archivo: string;
+  created_at: string;
 }
 
 interface DenunciaArchivosProps {
@@ -25,8 +26,8 @@ const getFileIcon = (tipoArchivo: string) => {
   return <FileText className="w-4 h-4" />;
 };
 
-const formatFileSize = (bytes: number) => {
-  if (bytes === 0) return '0 Bytes';
+const formatFileSize = (bytes: number | null) => {
+  if (!bytes || bytes === 0) return '0 Bytes';
   const k = 1024;
   const sizes = ['Bytes', 'KB', 'MB', 'GB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
@@ -50,7 +51,8 @@ const DenunciaArchivos = ({ denunciaId }: DenunciaArchivosProps) => {
       const { data, error } = await supabase
         .from('denuncia_archivos')
         .select('*')
-        .eq('denuncia_id', denunciaId);
+        .eq('denuncia_id', denunciaId)
+        .order('created_at', { ascending: false });
 
       if (error) {
         console.error('Error cargando archivos:', error);
@@ -85,6 +87,7 @@ const DenunciaArchivos = ({ denunciaId }: DenunciaArchivosProps) => {
         .getPublicUrl(archivo.ruta_archivo);
 
       if (urlData?.publicUrl) {
+        // Crear un enlace temporal para descargar
         const link = document.createElement('a');
         link.href = urlData.publicUrl;
         link.download = archivo.nombre_archivo;
@@ -182,7 +185,10 @@ const DenunciaArchivos = ({ denunciaId }: DenunciaArchivosProps) => {
                 <div>
                   <p className="text-sm font-medium">{archivo.nombre_archivo}</p>
                   <p className="text-xs text-gray-500">
-                    {formatFileSize(archivo.tamano_archivo || 0)} • {archivo.tipo_archivo}
+                    {formatFileSize(archivo.tamano_archivo)} • {archivo.tipo_archivo}
+                  </p>
+                  <p className="text-xs text-gray-400">
+                    {new Date(archivo.created_at).toLocaleDateString('es-ES')}
                   </p>
                 </div>
               </div>

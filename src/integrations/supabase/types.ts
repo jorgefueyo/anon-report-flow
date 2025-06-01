@@ -103,7 +103,7 @@ export type Database = {
       denuncia_archivos: {
         Row: {
           created_at: string
-          denuncia_id: string | null
+          denuncia_id: string
           id: string
           nombre_archivo: string
           ruta_archivo: string
@@ -112,7 +112,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          denuncia_id?: string | null
+          denuncia_id: string
           id?: string
           nombre_archivo: string
           ruta_archivo: string
@@ -121,7 +121,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
-          denuncia_id?: string | null
+          denuncia_id?: string
           id?: string
           nombre_archivo?: string
           ruta_archivo?: string
