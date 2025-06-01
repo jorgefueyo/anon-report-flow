@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -50,7 +51,7 @@ const BackofficeGestionDenuncia = () => {
   const { buscarDenunciaPorId } = useDenuncias();
 
   useEffect(() => {
-    // Verificar si hay admin logueado
+    // Check localStorage (consistent with BackofficeDenuncias)
     const adminData = localStorage.getItem('backoffice_admin');
     if (!adminData) {
       navigate('/backoffice/login');
@@ -62,6 +63,7 @@ const BackofficeGestionDenuncia = () => {
       setAdmin(parsedAdmin);
     } catch (error) {
       console.error('Error parsing admin data:', error);
+      localStorage.removeItem('backoffice_admin');
       navigate('/backoffice/login');
     }
   }, [navigate]);
@@ -253,16 +255,11 @@ const BackofficeGestionDenuncia = () => {
 
               {denuncia && !loading && !error && (
                 <div className="space-y-6">
-                  {/* Información de la denuncia */}
                   <DenunciaCard denuncia={denuncia} />
-
-                  {/* Gestionar denuncia */}
                   <GestionarDenuncia 
                     denuncia={denuncia} 
                     onDenunciaActualizada={handleDenunciaActualizada}
                   />
-
-                  {/* Historial de seguimiento */}
                   <HistorialSeguimiento denunciaId={denuncia.id} />
                 </div>
               )}

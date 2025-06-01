@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { LogOut } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 interface BackofficeHeaderProps {
   admin: any;
@@ -10,9 +11,17 @@ interface BackofficeHeaderProps {
 
 const BackofficeHeader = ({ admin }: BackofficeHeaderProps) => {
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   const handleLogout = () => {
+    // Use localStorage consistently
     localStorage.removeItem('backoffice_admin');
+    
+    toast({
+      title: "Sesión cerrada",
+      description: "Has cerrado sesión correctamente",
+    });
+    
     navigate('/backoffice/login');
   };
 

@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -62,41 +61,54 @@ const BackofficeDenuncias = () => {
 
   useEffect(() => {
     checkAuthAndLoadData();
-  }, [navigate]);
+  }, []);
 
   const checkAuthAndLoadData = async () => {
     try {
-      const adminId = sessionStorage.getItem('adminId');
-      if (!adminId) {
-        console.log('No admin ID found, redirecting to login');
+      // Check localStorage first (from BackofficeLogin)
+      const adminData = localStorage.getItem('backoffice_admin');
+      
+      if (!adminData) {
+        console.log('No admin data found in localStorage, redirecting to login');
         navigate('/backoffice/login');
         return;
       }
 
-      console.log('Checking admin authentication:', adminId);
+      let parsedAdmin;
+      try {
+        parsedAdmin = JSON.parse(adminData);
+      } catch (error) {
+        console.error('Error parsing admin data:', error);
+        localStorage.removeItem('backoffice_admin');
+        navigate('/backoffice/login');
+        return;
+      }
 
-      // Get admin data from database
-      const { data: adminData, error: adminError } = await supabase
+      console.log('Admin data found:', parsedAdmin);
+
+      // Verify admin exists in database
+      const { data: dbAdmin, error: adminError } = await supabase
         .from('administradores')
         .select('id, email, nombre, empresa_id, activo')
-        .eq('id', adminId)
+        .eq('email', parsedAdmin.email)
         .eq('activo', true)
         .single();
 
-      if (adminError || !adminData) {
-        console.error('Error verifying admin:', adminError);
-        sessionStorage.removeItem('adminId');
+      if (adminError || !dbAdmin) {
+        console.error('Admin not found in database or inactive:', adminError);
+        localStorage.removeItem('backoffice_admin');
         navigate('/backoffice/login');
         return;
       }
 
-      console.log('Admin verified:', adminData);
-      setAdmin(adminData);
+      console.log('Admin verified in database:', dbAdmin);
+      setAdmin(dbAdmin);
       
       // Load denuncias after admin is verified
       await cargarDenuncias();
     } catch (error) {
       console.error('Error in checkAuthAndLoadData:', error);
+      localStorage.removeItem('backoffice_admin');
       navigate('/backoffice/login');
     }
   };
