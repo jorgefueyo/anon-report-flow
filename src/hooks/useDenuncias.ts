@@ -132,10 +132,10 @@ export const useDenuncias = () => {
 
       console.log('Datos para inserción:', datosInsercion);
 
-      // Crear la denuncia
+      // Crear la denuncia (sin codigo_seguimiento que se auto-genera)
       const { data: denuncia, error: denunciaError } = await supabase
         .from('denuncias')
-        .insert(datosInsercion)
+        .insert([datosInsercion])
         .select()
         .single();
 
