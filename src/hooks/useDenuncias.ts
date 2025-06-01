@@ -52,6 +52,13 @@ export const useDenuncias = () => {
           continue;
         }
 
+        // Validar tamaño de archivo (máximo 10MB)
+        const maxSize = 10 * 1024 * 1024; // 10MB
+        if (archivo.size > maxSize) {
+          console.error(`Archivo ${archivo.name} excede el tamaño máximo de 10MB`);
+          throw new Error(`El archivo ${archivo.name} es demasiado grande (máximo 10MB)`);
+        }
+
         // Generar nombre único para el archivo
         const timestamp = Date.now();
         const randomString = Math.random().toString(36).substr(2, 9);
@@ -73,7 +80,6 @@ export const useDenuncias = () => {
           console.error('Error subiendo archivo al storage:', uploadError);
           console.error('Detalles del error:', {
             message: uploadError.message,
-            statusCode: uploadError.statusCode,
             archivo: archivo.name,
             ruta: nombreArchivo
           });
@@ -123,7 +129,7 @@ export const useDenuncias = () => {
       return true;
     } catch (error) {
       console.error('Error general en subirArchivos:', error);
-      throw error; // Re-lanzar el error para que se maneje arriba
+      throw error;
     }
   };
 
@@ -188,12 +194,8 @@ export const useDenuncias = () => {
           console.log('Archivos subidos exitosamente');
         } catch (archivoError) {
           console.error('Error subiendo archivos:', archivoError);
-          // No fallar la creación de denuncia por archivos, solo mostrar warning
-          toast({
-            title: "Advertencia",
-            description: "La denuncia se creó correctamente, pero algunos archivos no se pudieron subir",
-            variant: "destructive",
-          });
+          // Relanzar el error para que se maneje arriba
+          throw new Error(`La denuncia se creó pero falló la subida de archivos: ${archivoError instanceof Error ? archivoError.message : 'Error desconocido'}`);
         }
       }
 
