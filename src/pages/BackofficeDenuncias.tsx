@@ -194,6 +194,20 @@ const BackofficeDenuncias = () => {
     }
   };
 
+  // Función para mapear estados a los usados en EstadoBadge
+  const mapearEstadoParaBadge = (estado: string): 'pendiente' | 'en_proceso' | 'finalizada' => {
+    switch (estado) {
+      case 'asignada':
+        return 'en_proceso'; // Mapeamos asignada a en_proceso para el badge
+      case 'en_proceso':
+        return 'en_proceso';
+      case 'finalizada':
+        return 'finalizada';
+      default:
+        return 'pendiente';
+    }
+  };
+
   if (!admin) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -240,7 +254,7 @@ const BackofficeDenuncias = () => {
                     <div className="text-2xl font-bold text-blue-600">
                       {denunciasFiltradas.length}
                     </div>
-                    <p className="text-sm text-gray-500">Denuncias filtradas</p>
+                    <p className="text-sm text-gray-500">Denuncias totales</p>
                   </CardContent>
                 </Card>
                 <Card>
@@ -254,7 +268,7 @@ const BackofficeDenuncias = () => {
                 <Card>
                   <CardContent className="p-4">
                     <div className="text-2xl font-bold text-orange-600">
-                      {denunciasFiltradas.filter(d => d.estado === 'en_proceso').length}
+                      {denunciasFiltradas.filter(d => d.estado === 'en_proceso' || d.estado === 'asignada').length}
                     </div>
                     <p className="text-sm text-gray-500">En proceso</p>
                   </CardContent>
@@ -334,7 +348,7 @@ const BackofficeDenuncias = () => {
                               {denuncia.categoria || 'Sin categoría'}
                             </TableCell>
                             <TableCell>
-                              <EstadoBadge estado={denuncia.estado as 'pendiente' | 'en_proceso' | 'finalizada'} />
+                              <EstadoBadge estado={mapearEstadoParaBadge(denuncia.estado)} />
                             </TableCell>
                             <TableCell>
                               {new Date(denuncia.created_at).toLocaleDateString('es-ES')}

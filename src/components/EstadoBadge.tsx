@@ -3,7 +3,7 @@ import React from 'react';
 import { Badge } from '@/components/ui/badge';
 
 interface EstadoBadgeProps {
-  estado: 'pendiente' | 'en_proceso' | 'finalizada';
+  estado: 'pendiente' | 'en_proceso' | 'finalizada' | 'asignada';
 }
 
 const EstadoBadge = ({ estado }: EstadoBadgeProps) => {
@@ -13,8 +13,12 @@ const EstadoBadge = ({ estado }: EstadoBadgeProps) => {
         color: 'bg-yellow-100 text-yellow-800 border-yellow-200', 
         text: 'Pendiente' 
       },
-      'en_proceso': { 
+      'asignada': { 
         color: 'bg-blue-100 text-blue-800 border-blue-200', 
+        text: 'Asignada' 
+      },
+      'en_proceso': { 
+        color: 'bg-orange-100 text-orange-800 border-orange-200', 
         text: 'En Proceso' 
       },
       'finalizada': { 

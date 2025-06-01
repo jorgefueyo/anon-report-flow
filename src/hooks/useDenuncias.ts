@@ -1,13 +1,61 @@
-
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Denuncia, FormularioDenuncia, DenunciaArchivo } from '@/types/denuncia';
 import { encryptData } from '@/utils/encryption';
+import { useEmailNotifications } from '@/hooks/useEmailNotifications';
 
 export const useDenuncias = () => {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const { sendNewDenunciaNotification, sendEstadoCambioNotification } = useEmailNotifications();
+
+  const enviarNotificacionAdministradores = async (tipo: 'nueva_denuncia' | 'estado_cambio', denunciaCode: string, estadoAnterior?: string, estadoNuevo?: string) => {
+    try {
+      // Obtener administradores activos
+      const { data: administradores, error } = await supabase
+        .from('administradores')
+        .select('email, nombre')
+        .eq('activo', true);
+
+      if (error || !administradores) {
+        console.error('Error obteniendo administradores:', error);
+        return;
+      }
+
+      // Obtener empresa
+      const { data: empresa } = await supabase
+        .from('empresas')
+        .select('nombre')
+        .limit(1)
+        .single();
+
+      // Enviar notificaciones a todos los administradores
+      for (const admin of administradores) {
+        try {
+          if (tipo === 'nueva_denuncia') {
+            await sendNewDenunciaNotification(
+              admin.email,
+              denunciaCode,
+              empresa?.nombre
+            );
+          } else if (tipo === 'estado_cambio' && estadoAnterior && estadoNuevo) {
+            await sendEstadoCambioNotification(
+              admin.email,
+              denunciaCode,
+              estadoAnterior,
+              estadoNuevo,
+              empresa?.nombre
+            );
+          }
+        } catch (emailError) {
+          console.error(`Error enviando email a ${admin.email}:`, emailError);
+        }
+      }
+    } catch (error) {
+      console.error('Error enviando notificaciones:', error);
+    }
+  };
 
   const crearDenuncia = async (datos: FormularioDenuncia): Promise<string | null> => {
     setLoading(true);
@@ -52,7 +100,7 @@ export const useDenuncias = () => {
 
       console.log('Datos para inserción:', datosInsercion);
 
-      // Crear la denuncia
+      // Crear la denuncia - removemos codigo_seguimiento del objeto
       const { data: denuncia, error: denunciaError } = await supabase
         .from('denuncias')
         .insert(datosInsercion)
@@ -71,6 +119,9 @@ export const useDenuncias = () => {
       }
 
       console.log('Denuncia creada exitosamente:', denuncia);
+
+      // Enviar notificaciones a administradores
+      await enviarNotificacionAdministradores('nueva_denuncia', denuncia.codigo_seguimiento);
 
       toast({
         title: "Denuncia creada exitosamente",
@@ -100,6 +151,13 @@ export const useDenuncias = () => {
     try {
       console.log('Actualizando estado de denuncia:', { denunciaId, nuevoEstado, observaciones });
 
+      // Obtener el estado anterior y código de seguimiento
+      const { data: denunciaAnterior } = await supabase
+        .from('denuncias')
+        .select('estado, codigo_seguimiento')
+        .eq('id', denunciaId)
+        .single();
+
       const { error } = await supabase
         .from('denuncias')
         .update({ 
@@ -112,6 +170,16 @@ export const useDenuncias = () => {
       if (error) {
         console.error('Error actualizando estado:', error);
         throw new Error('Error al actualizar el estado: ' + error.message);
+      }
+
+      // Enviar notificaciones a administradores si cambió el estado
+      if (denunciaAnterior && denunciaAnterior.estado !== nuevoEstado) {
+        await enviarNotificacionAdministradores(
+          'estado_cambio', 
+          denunciaAnterior.codigo_seguimiento,
+          denunciaAnterior.estado,
+          nuevoEstado
+        );
       }
 
       toast({
