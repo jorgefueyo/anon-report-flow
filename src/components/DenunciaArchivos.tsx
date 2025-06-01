@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,21 @@ interface DenunciaArchivo {
 interface DenunciaArchivosProps {
   denunciaId: string;
 }
+
+const getFileIcon = (tipoArchivo: string) => {
+  if (tipoArchivo.startsWith('image/')) {
+    return <Image className="w-4 h-4" />;
+  }
+  return <FileText className="w-4 h-4" />;
+};
+
+const formatFileSize = (bytes: number) => {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+};
 
 const DenunciaArchivos = ({ denunciaId }: DenunciaArchivosProps) => {
   const [archivos, setArchivos] = useState<DenunciaArchivo[]>([]);
@@ -64,13 +80,11 @@ const DenunciaArchivos = ({ denunciaId }: DenunciaArchivosProps) => {
     try {
       console.log('Descargando archivo:', archivo);
 
-      // Intentar descargar usando URL pública primero
       const { data: urlData } = await supabase.storage
         .from('denuncia-archivos')
         .getPublicUrl(archivo.ruta_archivo);
 
       if (urlData?.publicUrl) {
-        // Crear enlace temporal para descarga
         const link = document.createElement('a');
         link.href = urlData.publicUrl;
         link.download = archivo.nombre_archivo;
@@ -98,7 +112,6 @@ const DenunciaArchivos = ({ denunciaId }: DenunciaArchivosProps) => {
 
   const previsualizarArchivo = async (archivo: DenunciaArchivo) => {
     try {
-      // Usar URL pública para previsualización
       const { data: urlData } = await supabase.storage
         .from('denuncia-archivos')
         .getPublicUrl(archivo.ruta_archivo);
@@ -120,21 +133,6 @@ const DenunciaArchivos = ({ denunciaId }: DenunciaArchivosProps) => {
         variant: "destructive",
       });
     }
-  };
-
-  const getFileIcon = (tipoArchivo: string) => {
-    if (tipoArchivo.startsWith('image/')) {
-      return <Image className="w-4 h-4" />;
-    }
-    return <FileText className="w-4 h-4" />;
-  };
-
-  const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
   if (loading) {
@@ -214,21 +212,6 @@ const DenunciaArchivos = ({ denunciaId }: DenunciaArchivosProps) => {
       </CardContent>
     </Card>
   );
-
-  function getFileIcon(tipoArchivo: string) {
-    if (tipoArchivo.startsWith('image/')) {
-      return <Image className="w-4 h-4" />;
-    }
-    return <FileText className="w-4 h-4" />;
-  }
-
-  function formatFileSize(bytes: number) {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  }
 };
 
 export default DenunciaArchivos;

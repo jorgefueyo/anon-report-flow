@@ -17,7 +17,6 @@ export const useDenuncias = () => {
     try {
       console.log('Enviando notificación al denunciante:', { tipo, codigo: denuncia.codigo_seguimiento });
       
-      // Desencriptar email del denunciante
       const emailDenunciante = secureDecryptData(denuncia.email_encriptado);
       
       if (tipo === 'nueva_denuncia') {
@@ -50,7 +49,7 @@ export const useDenuncias = () => {
         
         console.log('Subiendo archivo:', archivo.name, 'como:', nombreArchivo);
 
-        // Subir archivo al storage con opciones más permisivas
+        // Subir archivo al storage
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from('denuncia-archivos')
           .upload(nombreArchivo, archivo, {
@@ -102,7 +101,6 @@ export const useDenuncias = () => {
     try {
       console.log('Iniciando creación de denuncia con datos:', datos);
 
-      // Ensure empresa exists before creating denuncia
       const empresa = await ensureEmpresaExists();
       
       if (!empresa) {
@@ -111,7 +109,6 @@ export const useDenuncias = () => {
 
       console.log('Using empresa:', empresa);
 
-      // Generate tracking code
       const codigoSeguimiento = 'DEN-' + Math.random().toString(36).substr(2, 8).toUpperCase();
 
       const datosInsercion = {
@@ -169,7 +166,6 @@ export const useDenuncias = () => {
         ]);
       } catch (emailError) {
         console.error('Error enviando notificaciones:', emailError);
-        // No fallar toda la operación por un error de email
       }
 
       toast({
@@ -200,7 +196,7 @@ export const useDenuncias = () => {
     try {
       console.log('Actualizando estado de denuncia:', { denunciaId, nuevoEstado, observaciones });
 
-      // Obtener denuncia actual de forma más eficiente
+      // Optimized: obtener solo los campos necesarios
       const { data: denunciaAnterior, error: errorConsulta } = await supabase
         .from('denuncias')
         .select('id, codigo_seguimiento, estado, email_encriptado')
@@ -212,22 +208,24 @@ export const useDenuncias = () => {
         throw new Error('No se encontró la denuncia');
       }
 
-      // Preparar datos de actualización
-      const datosActualizacion: any = {
-        updated_at: new Date().toISOString()
-      };
+      // Optimized: solo actualizar si hay cambios reales
+      const datosActualizacion: any = {};
+      let hayActualizacion = false;
 
-      // Solo actualizar si hay cambios
       if (nuevoEstado !== denunciaAnterior.estado) {
         datosActualizacion.estado = nuevoEstado;
+        hayActualizacion = true;
       }
 
       if (observaciones?.trim()) {
         datosActualizacion.observaciones_internas = observaciones.trim();
+        hayActualizacion = true;
       }
 
-      // Actualizar la denuncia solo si hay cambios
-      if (Object.keys(datosActualizacion).length > 1) { // más de solo updated_at
+      // Solo actualizar si hay cambios
+      if (hayActualizacion) {
+        datosActualizacion.updated_at = new Date().toISOString();
+        
         const { error: errorActualizacion } = await supabase
           .from('denuncias')
           .update(datosActualizacion)
@@ -239,7 +237,7 @@ export const useDenuncias = () => {
         }
       }
 
-      // Crear registro de seguimiento solo si hay cambios significativos
+      // Crear registro de seguimiento si hay cambios significativos
       if (observaciones?.trim() || denunciaAnterior.estado !== nuevoEstado) {
         const { error: errorSeguimiento } = await supabase
           .from('seguimiento_denuncias')
@@ -256,13 +254,19 @@ export const useDenuncias = () => {
 
         if (errorSeguimiento) {
           console.error('Error creando registro de seguimiento:', errorSeguimiento);
-          // No fallar toda la operación por este error
         }
       }
 
       // Enviar notificaciones solo si cambió el estado
       if (denunciaAnterior.estado !== nuevoEstado) {
-        const denunciaActualizada = { ...denunciaAnterior, estado: nuevoEstado };
+        const denunciaActualizada: Denuncia = { 
+          ...denunciaAnterior, 
+          estado: nuevoEstado,
+          empresa_id: '', // Valor por defecto
+          hechos: '', // Valor por defecto  
+          created_at: '', // Valor por defecto
+          updated_at: '' // Valor por defecto
+        };
         
         // Enviar notificaciones en paralelo para mejorar velocidad
         Promise.all([
@@ -275,7 +279,6 @@ export const useDenuncias = () => {
           )
         ]).catch(emailError => {
           console.error('Error enviando notificaciones:', emailError);
-          // No fallar toda la operación por errores de email
         });
       }
 

@@ -20,6 +20,21 @@ interface HistorialSeguimientoProps {
   denunciaId: string;
 }
 
+const getEstadoBadgeColor = (estado: string) => {
+  switch (estado) {
+    case 'pendiente':
+      return 'bg-yellow-100 text-yellow-800';
+    case 'asignada':
+      return 'bg-blue-100 text-blue-800';
+    case 'en_proceso':
+      return 'bg-orange-100 text-orange-800';
+    case 'finalizada':
+      return 'bg-green-100 text-green-800';
+    default:
+      return 'bg-gray-100 text-gray-800';
+  }
+};
+
 const HistorialSeguimiento = ({ denunciaId }: HistorialSeguimientoProps) => {
   const [historial, setHistorial] = useState<HistorialItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -59,14 +74,13 @@ const HistorialSeguimiento = ({ denunciaId }: HistorialSeguimientoProps) => {
       .on(
         'postgres_changes',
         {
-          event: '*', // Escuchar todos los eventos
+          event: '*',
           schema: 'public',
           table: 'seguimiento_denuncias',
           filter: `denuncia_id=eq.${denunciaId}`
         },
         (payload) => {
           console.log('Cambio detectado en historial:', payload);
-          // Recargar el historial inmediatamente
           cargarHistorial();
         }
       )
@@ -79,21 +93,6 @@ const HistorialSeguimiento = ({ denunciaId }: HistorialSeguimientoProps) => {
       supabase.removeChannel(channel);
     };
   }, [denunciaId, cargarHistorial]);
-
-  const getEstadoBadgeColor = (estado: string) => {
-    switch (estado) {
-      case 'pendiente':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'asignada':
-        return 'bg-blue-100 text-blue-800';
-      case 'en_proceso':
-        return 'bg-orange-100 text-orange-800';
-      case 'finalizada':
-        return 'bg-green-100 text-green-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
 
   if (loading) {
     return (
@@ -166,21 +165,6 @@ const HistorialSeguimiento = ({ denunciaId }: HistorialSeguimientoProps) => {
       </CardContent>
     </Card>
   );
-
-  function getEstadoBadgeColor(estado: string) {
-    switch (estado) {
-      case 'pendiente':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'asignada':
-        return 'bg-blue-100 text-blue-800';
-      case 'en_proceso':
-        return 'bg-orange-100 text-orange-800';
-      case 'finalizada':
-        return 'bg-green-100 text-green-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  }
 };
 
 export default HistorialSeguimiento;
