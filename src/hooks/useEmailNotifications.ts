@@ -15,6 +15,8 @@ interface EmailNotificationData {
 export const useEmailNotifications = () => {
   const sendNotification = async (data: EmailNotificationData) => {
     try {
+      console.log('Enviando notificación por email:', data);
+      
       const { data: response, error } = await supabase.functions.invoke('send-notification-email', {
         body: data
       });
@@ -77,9 +79,53 @@ export const useEmailNotifications = () => {
     });
   };
 
+  const sendNotificationToAdmins = async (
+    tipo: 'nueva_denuncia' | 'estado_cambio',
+    denunciaCode: string,
+    estadoAnterior?: string,
+    estadoNuevo?: string,
+    empresaNombre?: string
+  ) => {
+    try {
+      console.log('Enviando notificaciones a administradores:', { tipo, denunciaCode });
+      
+      // Obtener todos los administradores activos
+      const { data: admins, error } = await supabase
+        .from('administradores')
+        .select('email, nombre')
+        .eq('activo', true);
+
+      if (error || !admins || admins.length === 0) {
+        console.log('No se encontraron administradores activos');
+        return;
+      }
+
+      // Enviar notificación a cada administrador
+      const notificationPromises = admins.map(admin => {
+        if (tipo === 'nueva_denuncia') {
+          return sendNewDenunciaNotification(admin.email, denunciaCode, empresaNombre);
+        } else {
+          return sendEstadoCambioNotification(
+            admin.email, 
+            denunciaCode, 
+            estadoAnterior!, 
+            estadoNuevo!, 
+            empresaNombre
+          );
+        }
+      });
+
+      await Promise.allSettled(notificationPromises);
+      console.log('Notificaciones enviadas a administradores');
+    } catch (error) {
+      console.error('Error enviando notificaciones a administradores:', error);
+    }
+  };
+
   return {
     sendNewDenunciaNotification,
     sendEstadoCambioNotification,
-    sendAsignacionNotification
+    sendAsignacionNotification,
+    sendNotificationToAdmins
   };
 };

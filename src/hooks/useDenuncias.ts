@@ -2,31 +2,37 @@ import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Denuncia, FormularioDenuncia, DenunciaArchivo } from '@/types/denuncia';
-import { secureEncryptData } from '@/utils/secureEncryption';
+import { secureEncryptData, secureDecryptData } from '@/utils/secureEncryption';
 import { useEmailNotifications } from '@/hooks/useEmailNotifications';
 import { useEmpresa } from '@/hooks/useEmpresa';
 
 export const useDenuncias = () => {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
-  const { sendNewDenunciaNotification, sendEstadoCambioNotification } = useEmailNotifications();
+  const { sendNewDenunciaNotification, sendEstadoCambioNotification, sendNotificationToAdmins } = useEmailNotifications();
   const { ensureEmpresaExists } = useEmpresa();
 
   const enviarNotificacionDenunciante = async (denuncia: Denuncia, tipo: 'nueva_denuncia' | 'estado_cambio', estadoAnterior?: string) => {
     try {
-      // Skip notification for now to avoid encryption issues
-      console.log('Notification would be sent:', { tipo, denuncia: denuncia.codigo_seguimiento });
+      console.log('Enviando notificación al denunciante:', { tipo, codigo: denuncia.codigo_seguimiento });
+      
+      // Desencriptar email del denunciante
+      const emailDenunciante = secureDecryptData(denuncia.email_encriptado);
+      
+      if (tipo === 'nueva_denuncia') {
+        await sendNewDenunciaNotification(emailDenunciante, denuncia.codigo_seguimiento);
+      } else {
+        await sendEstadoCambioNotification(
+          emailDenunciante, 
+          denuncia.codigo_seguimiento, 
+          estadoAnterior!, 
+          denuncia.estado
+        );
+      }
+      
+      console.log('Notificación enviada al denunciante exitosamente');
     } catch (error) {
       console.error('Error enviando notificación al denunciante:', error);
-    }
-  };
-
-  const enviarNotificacionAdministradores = async (tipo: 'nueva_denuncia' | 'estado_cambio', denunciaCode: string, estadoAnterior?: string, estadoNuevo?: string) => {
-    try {
-      // Skip notification for now to avoid issues
-      console.log('Admin notification would be sent:', { tipo, denunciaCode });
-    } catch (error) {
-      console.error('Error enviando notificaciones:', error);
     }
   };
 
@@ -84,6 +90,17 @@ export const useDenuncias = () => {
       }
 
       console.log('Denuncia creada exitosamente:', denuncia);
+
+      // Enviar notificaciones por email
+      try {
+        await Promise.all([
+          enviarNotificacionDenunciante(denuncia, 'nueva_denuncia'),
+          sendNotificationToAdmins('nueva_denuncia', denuncia.codigo_seguimiento, undefined, undefined, empresa.nombre)
+        ]);
+      } catch (emailError) {
+        console.error('Error enviando notificaciones:', emailError);
+        // No fallar toda la operación por un error de email
+      }
 
       toast({
         title: "Denuncia creada exitosamente",
@@ -159,17 +176,24 @@ export const useDenuncias = () => {
         }
       }
 
+      // Enviar notificaciones solo si cambió el estado
       if (denunciaAnterior.estado !== nuevoEstado) {
         const denunciaActualizada = { ...denunciaAnterior, estado: nuevoEstado };
-        await Promise.all([
-          enviarNotificacionDenunciante(denunciaActualizada, 'estado_cambio', denunciaAnterior.estado),
-          enviarNotificacionAdministradores(
-            'estado_cambio', 
-            denunciaAnterior.codigo_seguimiento,
-            denunciaAnterior.estado,
-            nuevoEstado
-          )
-        ]);
+        
+        try {
+          await Promise.all([
+            enviarNotificacionDenunciante(denunciaActualizada, 'estado_cambio', denunciaAnterior.estado),
+            sendNotificationToAdmins(
+              'estado_cambio', 
+              denunciaAnterior.codigo_seguimiento,
+              denunciaAnterior.estado,
+              nuevoEstado
+            )
+          ]);
+        } catch (emailError) {
+          console.error('Error enviando notificaciones:', emailError);
+          // No fallar toda la operación por un error de email
+        }
       }
 
       toast({
