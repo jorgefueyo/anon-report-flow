@@ -24,27 +24,13 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { 
   SidebarProvider,
-  SidebarInset,
-  Sidebar,
-  SidebarContent,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuItem,
-  SidebarMenuButton,
-  SidebarTrigger
+  SidebarInset
 } from "@/components/ui/sidebar";
+import BackofficeSidebar from "@/components/BackofficeSidebar";
+import BackofficeHeader from "@/components/BackofficeHeader";
+import UserManagementActions from "@/components/UserManagementActions";
 import { supabase } from "@/integrations/supabase/client";
-import { 
-  Building2, 
-  FileText, 
-  LogOut, 
-  Users, 
-  BarChart3,
-  Plus,
-  Trash2,
-  UserCheck,
-  UserX
-} from "lucide-react";
+import { Plus } from "lucide-react";
 
 interface Admin {
   id: string;
@@ -141,40 +127,6 @@ const BackofficeAdmin = () => {
     }
   };
 
-  const toggleUserStatus = async (userId: string, currentStatus: boolean) => {
-    try {
-      const { error } = await supabase
-        .from('administradores')
-        .update({ activo: !currentStatus })
-        .eq('id', userId);
-
-      if (error) throw error;
-
-      toast({
-        title: currentStatus ? "Usuario desactivado" : "Usuario activado",
-        description: "Estado del usuario actualizado correctamente",
-      });
-
-      loadUsuarios();
-    } catch (error) {
-      console.error('Error toggling user status:', error);
-      toast({
-        title: "Error",
-        description: "Error al cambiar el estado del usuario",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem('backoffice_admin');
-    toast({
-      title: "Sesión cerrada",
-      description: "Has cerrado sesión correctamente",
-    });
-    navigate('/backoffice/login');
-  };
-
   if (!admin || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -186,73 +138,10 @@ const BackofficeAdmin = () => {
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
-        <Sidebar>
-          <SidebarHeader className="p-4">
-            <div className="flex items-center space-x-2">
-              <Building2 className="w-8 h-8 text-blue-600" />
-              <div>
-                <h2 className="text-lg font-bold">Backoffice</h2>
-                <p className="text-sm text-gray-600">{admin.nombre}</p>
-              </div>
-            </div>
-          </SidebarHeader>
-          
-          <SidebarContent>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton 
-                  onClick={() => navigate('/backoffice')}
-                  className="w-full"
-                >
-                  <BarChart3 className="w-4 h-4" />
-                  Dashboard
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              
-              <SidebarMenuItem>
-                <SidebarMenuButton 
-                  onClick={() => navigate('/backoffice/denuncias')}
-                  className="w-full"
-                >
-                  <FileText className="w-4 h-4" />
-                  Denuncias
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              
-              <SidebarMenuItem>
-                <SidebarMenuButton 
-                  onClick={() => navigate('/backoffice/empresa')}
-                  className="w-full"
-                >
-                  <Building2 className="w-4 h-4" />
-                  Configurar Empresa
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              
-              <SidebarMenuItem>
-                <SidebarMenuButton 
-                  onClick={() => navigate('/backoffice/admin')}
-                  className="w-full bg-blue-100"
-                >
-                  <Users className="w-4 h-4" />
-                  Admin. Sistema
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarContent>
-        </Sidebar>
+        <BackofficeSidebar admin={admin} activeItem="admin" />
 
         <SidebarInset>
-          <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
-            <SidebarTrigger className="-ml-1" />
-            <div className="ml-auto flex items-center space-x-4">
-              <span className="text-sm text-gray-600">Bienvenido, {admin.nombre}</span>
-              <Button variant="outline" size="sm" onClick={handleLogout}>
-                <LogOut className="w-4 h-4 mr-2" />
-                Cerrar Sesión
-              </Button>
-            </div>
-          </header>
+          <BackofficeHeader admin={admin} />
 
           <div className="flex-1 p-6">
             <div className="max-w-6xl mx-auto">
@@ -364,25 +253,12 @@ const BackofficeAdmin = () => {
                             )}
                           </TableCell>
                           <TableCell>
-                            <div className="flex space-x-2">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => toggleUserStatus(usuario.id, usuario.activo)}
-                              >
-                                {usuario.activo ? (
-                                  <>
-                                    <UserX className="w-4 h-4 mr-1" />
-                                    Desactivar
-                                  </>
-                                ) : (
-                                  <>
-                                    <UserCheck className="w-4 h-4 mr-1" />
-                                    Activar
-                                  </>
-                                )}
-                              </Button>
-                            </div>
+                            <UserManagementActions
+                              userId={usuario.id}
+                              userEmail={usuario.email}
+                              userName={usuario.nombre}
+                              onUserUpdated={loadUsuarios}
+                            />
                           </TableCell>
                         </TableRow>
                       ))}
