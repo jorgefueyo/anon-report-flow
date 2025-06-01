@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -40,59 +39,91 @@ export const useDenuncias = () => {
     if (!archivos || archivos.length === 0) return true;
 
     try {
-      console.log('Subiendo archivos para denuncia:', denunciaId, archivos);
+      console.log('Iniciando subida de archivos para denuncia:', denunciaId);
+      console.log('Archivos a subir:', archivos.map(f => ({ name: f.name, size: f.size, type: f.type })));
 
-      for (const archivo of archivos) {
+      for (let i = 0; i < archivos.length; i++) {
+        const archivo = archivos[i];
+        console.log(`Procesando archivo ${i + 1}/${archivos.length}:`, archivo.name);
+
+        // Validar archivo
+        if (!archivo.name || archivo.size === 0) {
+          console.warn('Archivo inválido detectado:', archivo);
+          continue;
+        }
+
         // Generar nombre único para el archivo
-        const extension = archivo.name.split('.').pop();
-        const nombreArchivo = `${denunciaId}/${Date.now()}-${Math.random().toString(36).substr(2, 9)}.${extension}`;
+        const timestamp = Date.now();
+        const randomString = Math.random().toString(36).substr(2, 9);
+        const extension = archivo.name.split('.').pop() || 'bin';
+        const nombreArchivo = `${denunciaId}/${timestamp}-${randomString}.${extension}`;
         
-        console.log('Subiendo archivo:', archivo.name, 'como:', nombreArchivo);
+        console.log('Subiendo archivo como:', nombreArchivo);
 
-        // Subir archivo al storage
+        // Subir archivo al storage con configuración específica
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from('denuncia-archivos')
           .upload(nombreArchivo, archivo, {
             cacheControl: '3600',
-            upsert: false
+            upsert: false,
+            contentType: archivo.type || 'application/octet-stream'
           });
 
         if (uploadError) {
-          console.error('Error subiendo archivo:', uploadError);
+          console.error('Error subiendo archivo al storage:', uploadError);
+          console.error('Detalles del error:', {
+            message: uploadError.message,
+            statusCode: uploadError.statusCode,
+            archivo: archivo.name,
+            ruta: nombreArchivo
+          });
           throw new Error(`Error subiendo ${archivo.name}: ${uploadError.message}`);
         }
 
-        console.log('Archivo subido exitosamente:', uploadData);
+        console.log('Archivo subido exitosamente al storage:', uploadData);
 
         // Guardar referencia en la base de datos
-        const { error: dbError } = await supabase
+        const datosArchivo = {
+          denuncia_id: denunciaId,
+          nombre_archivo: archivo.name,
+          tipo_archivo: archivo.type || 'application/octet-stream',
+          tamano_archivo: archivo.size,
+          ruta_archivo: nombreArchivo
+        };
+
+        console.log('Guardando referencia en BD:', datosArchivo);
+
+        const { data: dbData, error: dbError } = await supabase
           .from('denuncia_archivos')
-          .insert({
-            denuncia_id: denunciaId,
-            nombre_archivo: archivo.name,
-            tipo_archivo: archivo.type,
-            tamano_archivo: archivo.size,
-            ruta_archivo: nombreArchivo
-          });
+          .insert(datosArchivo)
+          .select()
+          .single();
 
         if (dbError) {
-          console.error('Error guardando referencia del archivo:', dbError);
+          console.error('Error guardando referencia del archivo en BD:', dbError);
+          console.error('Datos que se intentaron insertar:', datosArchivo);
+          
+          // Intentar eliminar el archivo del storage si falló la BD
+          try {
+            await supabase.storage
+              .from('denuncia-archivos')
+              .remove([nombreArchivo]);
+            console.log('Archivo eliminado del storage debido a error en BD');
+          } catch (deleteError) {
+            console.error('Error eliminando archivo del storage:', deleteError);
+          }
+          
           throw new Error(`Error guardando referencia de ${archivo.name}: ${dbError.message}`);
         }
 
-        console.log('Referencia del archivo guardada en BD');
+        console.log('Referencia del archivo guardada exitosamente en BD:', dbData);
       }
 
-      console.log('Todos los archivos subidos exitosamente');
+      console.log('Todos los archivos procesados exitosamente');
       return true;
     } catch (error) {
-      console.error('Error en subirArchivos:', error);
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Error subiendo archivos",
-        variant: "destructive",
-      });
-      return false;
+      console.error('Error general en subirArchivos:', error);
+      throw error; // Re-lanzar el error para que se maneje arriba
     }
   };
 
@@ -152,9 +183,17 @@ export const useDenuncias = () => {
       // Subir archivos si existen
       if (datos.archivos && datos.archivos.length > 0) {
         console.log('Subiendo archivos adjuntos...');
-        const archivosSubidos = await subirArchivos(datos.archivos, denuncia.id);
-        if (!archivosSubidos) {
-          console.warn('Algunos archivos no se pudieron subir, pero la denuncia se creó correctamente');
+        try {
+          await subirArchivos(datos.archivos, denuncia.id);
+          console.log('Archivos subidos exitosamente');
+        } catch (archivoError) {
+          console.error('Error subiendo archivos:', archivoError);
+          // No fallar la creación de denuncia por archivos, solo mostrar warning
+          toast({
+            title: "Advertencia",
+            description: "La denuncia se creó correctamente, pero algunos archivos no se pudieron subir",
+            variant: "destructive",
+          });
         }
       }
 
