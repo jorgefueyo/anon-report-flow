@@ -4,11 +4,13 @@ import { useToast } from '@/hooks/use-toast';
 import { Denuncia, FormularioDenuncia, DenunciaArchivo } from '@/types/denuncia';
 import { secureEncryptData } from '@/utils/secureEncryption';
 import { useEmailNotifications } from '@/hooks/useEmailNotifications';
+import { useEmpresa } from '@/hooks/useEmpresa';
 
 export const useDenuncias = () => {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const { sendNewDenunciaNotification, sendEstadoCambioNotification } = useEmailNotifications();
+  const { ensureEmpresaExists } = useEmpresa();
 
   const enviarNotificacionDenunciante = async (denuncia: Denuncia, tipo: 'nueva_denuncia' | 'estado_cambio', estadoAnterior?: string) => {
     try {
@@ -33,41 +35,14 @@ export const useDenuncias = () => {
     try {
       console.log('Iniciando creación de denuncia con datos:', datos);
 
-      // Get or create empresa first
-      let { data: empresas, error: empresaError } = await supabase
-        .from('empresas')
-        .select('id, nombre')
-        .limit(1);
-
-      console.log('Empresas encontradas:', empresas);
-
-      if (empresaError) {
-        console.error('Error obteniendo empresa:', empresaError);
-        throw new Error('Error al obtener empresa: ' + empresaError.message);
+      // Ensure empresa exists before creating denuncia
+      const empresa = await ensureEmpresaExists();
+      
+      if (!empresa) {
+        throw new Error('No se pudo obtener o crear la empresa');
       }
 
-      let empresa;
-      if (!empresas || empresas.length === 0) {
-        console.log('No empresa found, creating default...');
-        const { data: nuevaEmpresa, error: errorCreacion } = await supabase
-          .from('empresas')
-          .insert({
-            nombre: 'Empresa Demo',
-            cif: '12345678A',
-            email: 'demo@empresa.com',
-            configurada: true
-          })
-          .select()
-          .single();
-
-        if (errorCreacion || !nuevaEmpresa) {
-          throw new Error('Error creando empresa por defecto: ' + errorCreacion?.message);
-        }
-
-        empresa = nuevaEmpresa;
-      } else {
-        empresa = empresas[0];
-      }
+      console.log('Using empresa:', empresa);
 
       // Generate tracking code
       const codigoSeguimiento = 'DEN-' + Math.random().toString(36).substr(2, 8).toUpperCase();

@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -60,26 +61,45 @@ const BackofficeDenuncias = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Use sessionStorage instead of localStorage for consistency with security context
-    const adminId = sessionStorage.getItem('adminId');
-    if (!adminId) {
-      navigate('/backoffice/login');
-      return;
-    }
-
-    // Get admin data from session
-    const adminData = localStorage.getItem('backoffice_admin');
-    if (adminData) {
-      try {
-        const parsedAdmin = JSON.parse(adminData);
-        setAdmin(parsedAdmin);
-      } catch (error) {
-        console.error('Error parsing admin data:', error);
-      }
-    }
-
-    cargarDenuncias();
+    checkAuthAndLoadData();
   }, [navigate]);
+
+  const checkAuthAndLoadData = async () => {
+    try {
+      const adminId = sessionStorage.getItem('adminId');
+      if (!adminId) {
+        console.log('No admin ID found, redirecting to login');
+        navigate('/backoffice/login');
+        return;
+      }
+
+      console.log('Checking admin authentication:', adminId);
+
+      // Get admin data from database
+      const { data: adminData, error: adminError } = await supabase
+        .from('administradores')
+        .select('id, email, nombre, empresa_id, activo')
+        .eq('id', adminId)
+        .eq('activo', true)
+        .single();
+
+      if (adminError || !adminData) {
+        console.error('Error verifying admin:', adminError);
+        sessionStorage.removeItem('adminId');
+        navigate('/backoffice/login');
+        return;
+      }
+
+      console.log('Admin verified:', adminData);
+      setAdmin(adminData);
+      
+      // Load denuncias after admin is verified
+      await cargarDenuncias();
+    } catch (error) {
+      console.error('Error in checkAuthAndLoadData:', error);
+      navigate('/backoffice/login');
+    }
+  };
 
   const cargarDenuncias = async () => {
     try {

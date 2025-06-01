@@ -22,57 +22,39 @@ export const useEmpresa = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const loadEmpresa = async () => {
-      try {
-        console.log('Loading empresa data...');
-        // Buscar cualquier empresa configurada primero
-        let { data, error } = await supabase
-          .from('empresas')
-          .select('*')
-          .eq('configurada', true)
-          .order('updated_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        if (error && error.code !== 'PGRST116') {
-          console.error('Error loading empresa:', error);
-          return;
-        }
-
-        // Si no hay empresa configurada, buscar cualquier empresa
-        if (!data) {
-          console.log('No configured empresa found, looking for any empresa...');
-          const { data: anyEmpresa, error: anyError } = await supabase
-            .from('empresas')
-            .select('*')
-            .order('updated_at', { ascending: false })
-            .limit(1)
-            .maybeSingle();
-
-          if (anyError && anyError.code !== 'PGRST116') {
-            console.error('Error loading any empresa:', anyError);
-            return;
-          }
-
-          data = anyEmpresa;
-        }
-
-        if (data) {
-          console.log('Empresa data loaded:', data);
-          setEmpresa(data as Empresa);
-        } else {
-          console.log('No empresa found in database');
-          setEmpresa(null);
-        }
-      } catch (error) {
-        console.error('Error loading empresa:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     loadEmpresa();
   }, []);
+
+  const loadEmpresa = async () => {
+    try {
+      console.log('Loading empresa data...');
+      
+      // First try to find any existing empresa
+      let { data, error } = await supabase
+        .from('empresas')
+        .select('*')
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error loading empresa:', error);
+        return;
+      }
+
+      if (data) {
+        console.log('Empresa data loaded:', data);
+        setEmpresa(data as Empresa);
+      } else {
+        console.log('No empresa found, will create one when needed');
+        setEmpresa(null);
+      }
+    } catch (error) {
+      console.error('Error loading empresa:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const uploadLogo = async (file: File, empresaId: string): Promise<string | null> => {
     try {
@@ -114,24 +96,27 @@ export const useEmpresa = () => {
       let empresaToUpdate = empresa;
       let logoUrl = empresa?.logo_url || null;
 
-      // Si no hay empresa cargada, crear una nueva
+      // If no empresa exists, create a new one
       if (!empresaToUpdate) {
         console.log('No empresa loaded, creating new one...');
+        
+        const empresaData = {
+          nombre: updatedData.nombre || 'Nueva Empresa',
+          cif: updatedData.cif || Math.random().toString(36).substr(2, 9).toUpperCase(),
+          direccion: updatedData.direccion || null,
+          codigo_postal: updatedData.codigo_postal || null,
+          ciudad: updatedData.ciudad || null,
+          provincia: updatedData.provincia || null,
+          pais: updatedData.pais || 'España',
+          email: updatedData.email || null,
+          telefono: updatedData.telefono || null,
+          configurada: true,
+          logo_url: null
+        };
+
         const { data: newEmpresa, error: createError } = await supabase
           .from('empresas')
-          .insert({
-            nombre: updatedData.nombre || 'Nueva Empresa',
-            cif: updatedData.cif || '',
-            direccion: updatedData.direccion || null,
-            codigo_postal: updatedData.codigo_postal || null,
-            ciudad: updatedData.ciudad || null,
-            provincia: updatedData.provincia || null,
-            pais: updatedData.pais || 'España',
-            email: updatedData.email || null,
-            telefono: updatedData.telefono || null,
-            configurada: true,
-            logo_url: null
-          })
+          .insert(empresaData)
           .select()
           .single();
 
@@ -144,7 +129,7 @@ export const useEmpresa = () => {
         console.log('New empresa created:', empresaToUpdate);
       }
 
-      // Subir logo si se proporciona
+      // Upload logo if provided
       if (logoFile && empresaToUpdate) {
         console.log('Uploading logo file...');
         const uploadedLogoUrl = await uploadLogo(logoFile, empresaToUpdate.id);
@@ -157,7 +142,7 @@ export const useEmpresa = () => {
         }
       }
 
-      // Actualizar los datos de la empresa
+      // Update empresa data
       const dataToUpdate = {
         ...updatedData,
         logo_url: logoUrl,
@@ -181,7 +166,7 @@ export const useEmpresa = () => {
 
       console.log('Updated empresa data:', data);
 
-      // Actualizar el estado local
+      // Update local state
       setEmpresa(data as Empresa);
       return { success: true };
     } catch (error) {
@@ -193,5 +178,56 @@ export const useEmpresa = () => {
     }
   };
 
-  return { empresa, loading, updateEmpresa };
+  const ensureEmpresaExists = async (): Promise<Empresa | null> => {
+    if (empresa) return empresa;
+
+    try {
+      console.log('Ensuring empresa exists...');
+      
+      // Try to load existing empresa first
+      const { data: existingEmpresa, error: loadError } = await supabase
+        .from('empresas')
+        .select('*')
+        .limit(1)
+        .maybeSingle();
+
+      if (loadError && loadError.code !== 'PGRST116') {
+        console.error('Error loading empresa:', loadError);
+        return null;
+      }
+
+      if (existingEmpresa) {
+        console.log('Found existing empresa:', existingEmpresa);
+        setEmpresa(existingEmpresa as Empresa);
+        return existingEmpresa as Empresa;
+      }
+
+      // Create default empresa if none exists
+      console.log('Creating default empresa...');
+      const { data: newEmpresa, error: createError } = await supabase
+        .from('empresas')
+        .insert({
+          nombre: 'Empresa Demo',
+          cif: 'DEMO' + Math.random().toString(36).substr(2, 5).toUpperCase(),
+          email: 'demo@empresa.com',
+          configurada: true
+        })
+        .select()
+        .single();
+
+      if (createError) {
+        console.error('Error creating default empresa:', createError);
+        return null;
+      }
+
+      console.log('Default empresa created:', newEmpresa);
+      setEmpresa(newEmpresa as Empresa);
+      return newEmpresa as Empresa;
+    } catch (error) {
+      console.error('Error ensuring empresa exists:', error);
+      return null;
+    }
+  };
+
+  return { empresa, loading, updateEmpresa, ensureEmpresaExists };
 };
