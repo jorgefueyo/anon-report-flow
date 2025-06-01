@@ -107,6 +107,7 @@ export const useDenuncias = () => {
 
       const empresa = empresas[0];
 
+      // Fix: Remove codigo_seguimiento from insert data as it's auto-generated
       const datosInsercion = {
         empresa_id: empresa.id,
         email_encriptado: encryptData(datos.email),
@@ -177,7 +178,6 @@ export const useDenuncias = () => {
     try {
       console.log('Actualizando estado de denuncia:', { denunciaId, nuevoEstado, observaciones });
 
-      // Obtener la denuncia completa antes de actualizar
       const { data: denunciaAnterior, error: errorConsulta } = await supabase
         .from('denuncias')
         .select('*')
@@ -189,7 +189,6 @@ export const useDenuncias = () => {
         throw new Error('No se encontró la denuncia');
       }
 
-      // Actualizar la denuncia
       const { error: errorActualizacion } = await supabase
         .from('denuncias')
         .update({ 
@@ -204,7 +203,6 @@ export const useDenuncias = () => {
         throw new Error('Error al actualizar el estado: ' + errorActualizacion.message);
       }
 
-      // Crear registro en historial de seguimiento SIEMPRE que hay observaciones o cambio de estado
       if (observaciones || denunciaAnterior.estado !== nuevoEstado) {
         const { error: errorSeguimiento } = await supabase
           .from('seguimiento_denuncias')
@@ -224,7 +222,6 @@ export const useDenuncias = () => {
         }
       }
 
-      // Enviar notificaciones solo si cambió el estado
       if (denunciaAnterior.estado !== nuevoEstado) {
         const denunciaActualizada = { ...denunciaAnterior, estado: nuevoEstado };
         await Promise.all([

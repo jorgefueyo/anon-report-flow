@@ -14,6 +14,7 @@ export type Database = {
           activo: boolean | null
           created_at: string | null
           email: string
+          empresa_id: string
           id: string
           nombre: string
           password_hash: string
@@ -25,6 +26,7 @@ export type Database = {
           activo?: boolean | null
           created_at?: string | null
           email: string
+          empresa_id: string
           id?: string
           nombre: string
           password_hash: string
@@ -36,6 +38,7 @@ export type Database = {
           activo?: boolean | null
           created_at?: string | null
           email?: string
+          empresa_id?: string
           id?: string
           nombre?: string
           password_hash?: string
@@ -43,7 +46,15 @@ export type Database = {
           requiere_cambio_password?: boolean | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_administradores_empresa"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       configuracion_correo: {
         Row: {
@@ -369,6 +380,14 @@ export type Database = {
       generate_codigo_seguimiento: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      get_current_admin_empresa_id: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      is_current_user_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
       }
     }
     Enums: {
