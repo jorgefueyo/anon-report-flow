@@ -36,6 +36,62 @@ export const useDenuncias = () => {
     }
   };
 
+  const subirArchivos = async (archivos: File[], denunciaId: string): Promise<boolean> => {
+    if (!archivos || archivos.length === 0) return true;
+
+    try {
+      console.log('Subiendo archivos para denuncia:', denunciaId, archivos);
+
+      for (const archivo of archivos) {
+        // Generar nombre único para el archivo
+        const extension = archivo.name.split('.').pop();
+        const nombreArchivo = `${denunciaId}/${Date.now()}-${Math.random().toString(36).substr(2, 9)}.${extension}`;
+        
+        console.log('Subiendo archivo:', archivo.name, 'como:', nombreArchivo);
+
+        // Subir archivo al storage
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('denuncia-archivos')
+          .upload(nombreArchivo, archivo);
+
+        if (uploadError) {
+          console.error('Error subiendo archivo:', uploadError);
+          throw new Error(`Error subiendo ${archivo.name}: ${uploadError.message}`);
+        }
+
+        console.log('Archivo subido exitosamente:', uploadData);
+
+        // Guardar referencia en la base de datos
+        const { error: dbError } = await supabase
+          .from('denuncia_archivos')
+          .insert({
+            denuncia_id: denunciaId,
+            nombre_archivo: archivo.name,
+            tipo_archivo: archivo.type,
+            tamano_archivo: archivo.size,
+            ruta_archivo: nombreArchivo
+          });
+
+        if (dbError) {
+          console.error('Error guardando referencia del archivo:', dbError);
+          throw new Error(`Error guardando referencia de ${archivo.name}: ${dbError.message}`);
+        }
+
+        console.log('Referencia del archivo guardada en BD');
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error en subirArchivos:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Error subiendo archivos",
+        variant: "destructive",
+      });
+      return false;
+    }
+  };
+
   const crearDenuncia = async (datos: FormularioDenuncia): Promise<string | null> => {
     setLoading(true);
     try {
@@ -90,6 +146,15 @@ export const useDenuncias = () => {
       }
 
       console.log('Denuncia creada exitosamente:', denuncia);
+
+      // Subir archivos si existen
+      if (datos.archivos && datos.archivos.length > 0) {
+        console.log('Subiendo archivos adjuntos...');
+        const archivosSubidos = await subirArchivos(datos.archivos, denuncia.id);
+        if (!archivosSubidos) {
+          console.warn('Algunos archivos no se pudieron subir, pero la denuncia se creó correctamente');
+        }
+      }
 
       // Enviar notificaciones por email
       try {

@@ -10,7 +10,7 @@ interface DenunciaArchivo {
   id: string;
   nombre_archivo: string;
   tipo_archivo: string;
-  tamaño: number;
+  tamano_archivo: number;
   ruta_archivo: string;
 }
 
@@ -43,7 +43,16 @@ const DenunciaArchivos = ({ denunciaId }: DenunciaArchivosProps) => {
       }
 
       console.log('Archivos encontrados:', data);
-      setArchivos(data || []);
+      // Mapear los datos para que coincidan con la interfaz
+      const archivosMapeados = data?.map(archivo => ({
+        id: archivo.id,
+        nombre_archivo: archivo.nombre_archivo,
+        tipo_archivo: archivo.tipo_archivo,
+        tamano_archivo: archivo.tamano_archivo || 0,
+        ruta_archivo: archivo.ruta_archivo
+      })) || [];
+      
+      setArchivos(archivosMapeados);
     } catch (error) {
       console.error('Error:', error);
     } finally {
@@ -174,7 +183,7 @@ const DenunciaArchivos = ({ denunciaId }: DenunciaArchivosProps) => {
                 <div>
                   <p className="text-sm font-medium">{archivo.nombre_archivo}</p>
                   <p className="text-xs text-gray-500">
-                    {formatFileSize(archivo.tamaño)} • {archivo.tipo_archivo}
+                    {formatFileSize(archivo.tamano_archivo)} • {archivo.tipo_archivo}
                   </p>
                 </div>
               </div>
