@@ -26,6 +26,8 @@ const HistorialSeguimiento = ({ denunciaId }: HistorialSeguimientoProps) => {
 
   const cargarHistorial = useCallback(async () => {
     try {
+      console.log('Cargando historial para denuncia:', denunciaId);
+      
       const { data, error } = await supabase
         .from('seguimiento_denuncias')
         .select('*')
@@ -37,6 +39,7 @@ const HistorialSeguimiento = ({ denunciaId }: HistorialSeguimientoProps) => {
         return;
       }
 
+      console.log('Historial cargado:', data);
       setHistorial(data || []);
     } catch (error) {
       console.error('Error cargando historial:', error);
@@ -50,24 +53,29 @@ const HistorialSeguimiento = ({ denunciaId }: HistorialSeguimientoProps) => {
       cargarHistorial();
     }
 
+    // Suscripción a cambios en tiempo real
     const channel = supabase
-      .channel('historial-seguimiento')
+      .channel(`historial-seguimiento-${denunciaId}`)
       .on(
         'postgres_changes',
         {
-          event: 'INSERT',
+          event: '*', // Escuchar todos los eventos
           schema: 'public',
           table: 'seguimiento_denuncias',
           filter: `denuncia_id=eq.${denunciaId}`
         },
-        () => {
-          console.log('Nuevo registro en historial, recargando...');
+        (payload) => {
+          console.log('Cambio detectado en historial:', payload);
+          // Recargar el historial inmediatamente
           cargarHistorial();
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('Estado de suscripción al historial:', status);
+      });
 
     return () => {
+      console.log('Limpiando suscripción al historial');
       supabase.removeChannel(channel);
     };
   }, [denunciaId, cargarHistorial]);
@@ -94,7 +102,9 @@ const HistorialSeguimiento = ({ denunciaId }: HistorialSeguimientoProps) => {
           <CardTitle>Historial de Seguimiento</CardTitle>
         </CardHeader>
         <CardContent>
-          <p>Cargando historial...</p>
+          <div className="flex justify-center py-4">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+          </div>
         </CardContent>
       </Card>
     );
@@ -156,6 +166,21 @@ const HistorialSeguimiento = ({ denunciaId }: HistorialSeguimientoProps) => {
       </CardContent>
     </Card>
   );
+
+  function getEstadoBadgeColor(estado: string) {
+    switch (estado) {
+      case 'pendiente':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'asignada':
+        return 'bg-blue-100 text-blue-800';
+      case 'en_proceso':
+        return 'bg-orange-100 text-orange-800';
+      case 'finalizada':
+        return 'bg-green-100 text-green-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  }
 };
 
 export default HistorialSeguimiento;

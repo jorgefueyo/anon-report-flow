@@ -50,10 +50,13 @@ export const useDenuncias = () => {
         
         console.log('Subiendo archivo:', archivo.name, 'como:', nombreArchivo);
 
-        // Subir archivo al storage
+        // Subir archivo al storage con opciones más permisivas
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from('denuncia-archivos')
-          .upload(nombreArchivo, archivo);
+          .upload(nombreArchivo, archivo, {
+            cacheControl: '3600',
+            upsert: false
+          });
 
         if (uploadError) {
           console.error('Error subiendo archivo:', uploadError);
@@ -197,9 +200,10 @@ export const useDenuncias = () => {
     try {
       console.log('Actualizando estado de denuncia:', { denunciaId, nuevoEstado, observaciones });
 
+      // Obtener denuncia actual de forma más eficiente
       const { data: denunciaAnterior, error: errorConsulta } = await supabase
         .from('denuncias')
-        .select('*')
+        .select('id, codigo_seguimiento, estado, email_encriptado')
         .eq('id', denunciaId)
         .single();
 
@@ -208,38 +212,51 @@ export const useDenuncias = () => {
         throw new Error('No se encontró la denuncia');
       }
 
-      const { error: errorActualizacion } = await supabase
-        .from('denuncias')
-        .update({ 
-          estado: nuevoEstado,
-          observaciones_internas: observaciones,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', denunciaId);
+      // Preparar datos de actualización
+      const datosActualizacion: any = {
+        updated_at: new Date().toISOString()
+      };
 
-      if (errorActualizacion) {
-        console.error('Error actualizando estado:', errorActualizacion);
-        throw new Error('Error al actualizar el estado: ' + errorActualizacion.message);
+      // Solo actualizar si hay cambios
+      if (nuevoEstado !== denunciaAnterior.estado) {
+        datosActualizacion.estado = nuevoEstado;
       }
 
-      // Add tracking record only if there are changes
-      if (observaciones || denunciaAnterior.estado !== nuevoEstado) {
+      if (observaciones?.trim()) {
+        datosActualizacion.observaciones_internas = observaciones.trim();
+      }
+
+      // Actualizar la denuncia solo si hay cambios
+      if (Object.keys(datosActualizacion).length > 1) { // más de solo updated_at
+        const { error: errorActualizacion } = await supabase
+          .from('denuncias')
+          .update(datosActualizacion)
+          .eq('id', denunciaId);
+
+        if (errorActualizacion) {
+          console.error('Error actualizando estado:', errorActualizacion);
+          throw new Error('Error al actualizar el estado: ' + errorActualizacion.message);
+        }
+      }
+
+      // Crear registro de seguimiento solo si hay cambios significativos
+      if (observaciones?.trim() || denunciaAnterior.estado !== nuevoEstado) {
         const { error: errorSeguimiento } = await supabase
           .from('seguimiento_denuncias')
           .insert({
             denuncia_id: denunciaId,
             estado_anterior: denunciaAnterior.estado !== nuevoEstado ? denunciaAnterior.estado : null,
             estado_nuevo: nuevoEstado,
-            operacion: observaciones ? 'Actualización con observaciones' : 'Actualización de estado',
+            operacion: observaciones?.trim() ? 'Actualización con observaciones' : 'Actualización de estado',
             acciones_realizadas: denunciaAnterior.estado !== nuevoEstado 
               ? `Estado cambiado de ${denunciaAnterior.estado} a ${nuevoEstado}` 
               : 'Observaciones añadidas',
-            observaciones: observaciones || null
+            observaciones: observaciones?.trim() || null
           });
 
         if (errorSeguimiento) {
           console.error('Error creando registro de seguimiento:', errorSeguimiento);
-          // Don't fail the whole operation for tracking error
+          // No fallar toda la operación por este error
         }
       }
 
@@ -247,25 +264,24 @@ export const useDenuncias = () => {
       if (denunciaAnterior.estado !== nuevoEstado) {
         const denunciaActualizada = { ...denunciaAnterior, estado: nuevoEstado };
         
-        try {
-          await Promise.all([
-            enviarNotificacionDenunciante(denunciaActualizada, 'estado_cambio', denunciaAnterior.estado),
-            sendNotificationToAdmins(
-              'estado_cambio', 
-              denunciaAnterior.codigo_seguimiento,
-              denunciaAnterior.estado,
-              nuevoEstado
-            )
-          ]);
-        } catch (emailError) {
+        // Enviar notificaciones en paralelo para mejorar velocidad
+        Promise.all([
+          enviarNotificacionDenunciante(denunciaActualizada, 'estado_cambio', denunciaAnterior.estado),
+          sendNotificationToAdmins(
+            'estado_cambio', 
+            denunciaAnterior.codigo_seguimiento,
+            denunciaAnterior.estado,
+            nuevoEstado
+          )
+        ]).catch(emailError => {
           console.error('Error enviando notificaciones:', emailError);
-          // No fallar toda la operación por un error de email
-        }
+          // No fallar toda la operación por errores de email
+        });
       }
 
       toast({
         title: "Denuncia actualizada",
-        description: observaciones ? "Observaciones añadidas correctamente" : `Estado actualizado a: ${nuevoEstado}`,
+        description: observaciones?.trim() ? "Observaciones añadidas correctamente" : `Estado actualizado a: ${nuevoEstado}`,
       });
 
       return true;

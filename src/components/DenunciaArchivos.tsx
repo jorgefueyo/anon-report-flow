@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -48,16 +47,7 @@ const DenunciaArchivos = ({ denunciaId }: DenunciaArchivosProps) => {
       }
 
       console.log('Archivos encontrados:', data);
-      // Mapear los datos para que coincidan con la interfaz
-      const archivosMapeados = data?.map(archivo => ({
-        id: archivo.id,
-        nombre_archivo: archivo.nombre_archivo,
-        tipo_archivo: archivo.tipo_archivo,
-        tamano_archivo: archivo.tamano_archivo || 0,
-        ruta_archivo: archivo.ruta_archivo
-      })) || [];
-      
-      setArchivos(archivosMapeados);
+      setArchivos(data || []);
     } catch (error) {
       console.error('Error:', error);
       toast({
@@ -74,34 +64,28 @@ const DenunciaArchivos = ({ denunciaId }: DenunciaArchivosProps) => {
     try {
       console.log('Descargando archivo:', archivo);
 
-      const { data, error } = await supabase.storage
+      // Intentar descargar usando URL pública primero
+      const { data: urlData } = await supabase.storage
         .from('denuncia-archivos')
-        .download(archivo.ruta_archivo);
+        .getPublicUrl(archivo.ruta_archivo);
 
-      if (error) {
-        console.error('Error descargando archivo:', error);
+      if (urlData?.publicUrl) {
+        // Crear enlace temporal para descarga
+        const link = document.createElement('a');
+        link.href = urlData.publicUrl;
+        link.download = archivo.nombre_archivo;
+        link.target = '_blank';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
         toast({
-          title: "Error",
-          description: "No se pudo descargar el archivo",
-          variant: "destructive",
+          title: "Descarga iniciada",
+          description: `Descargando ${archivo.nombre_archivo}`,
         });
-        return;
+      } else {
+        throw new Error('No se pudo obtener la URL del archivo');
       }
-
-      // Crear URL para descarga
-      const url = URL.createObjectURL(data);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = archivo.nombre_archivo;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-
-      toast({
-        title: "Descarga iniciada",
-        description: `Descargando ${archivo.nombre_archivo}`,
-      });
     } catch (error) {
       console.error('Error descargando archivo:', error);
       toast({
@@ -114,12 +98,13 @@ const DenunciaArchivos = ({ denunciaId }: DenunciaArchivosProps) => {
 
   const previsualizarArchivo = async (archivo: DenunciaArchivo) => {
     try {
-      const { data } = await supabase.storage
+      // Usar URL pública para previsualización
+      const { data: urlData } = await supabase.storage
         .from('denuncia-archivos')
-        .createSignedUrl(archivo.ruta_archivo, 3600); // 1 hora
+        .getPublicUrl(archivo.ruta_archivo);
 
-      if (data?.signedUrl) {
-        window.open(data.signedUrl, '_blank');
+      if (urlData?.publicUrl) {
+        window.open(urlData.publicUrl, '_blank');
       } else {
         toast({
           title: "Error",
@@ -199,7 +184,7 @@ const DenunciaArchivos = ({ denunciaId }: DenunciaArchivosProps) => {
                 <div>
                   <p className="text-sm font-medium">{archivo.nombre_archivo}</p>
                   <p className="text-xs text-gray-500">
-                    {formatFileSize(archivo.tamano_archivo)} • {archivo.tipo_archivo}
+                    {formatFileSize(archivo.tamano_archivo || 0)} • {archivo.tipo_archivo}
                   </p>
                 </div>
               </div>
@@ -229,6 +214,21 @@ const DenunciaArchivos = ({ denunciaId }: DenunciaArchivosProps) => {
       </CardContent>
     </Card>
   );
+
+  function getFileIcon(tipoArchivo: string) {
+    if (tipoArchivo.startsWith('image/')) {
+      return <Image className="w-4 h-4" />;
+    }
+    return <FileText className="w-4 h-4" />;
+  }
+
+  function formatFileSize(bytes: number) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  }
 };
 
 export default DenunciaArchivos;
