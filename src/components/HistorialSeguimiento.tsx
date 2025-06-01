@@ -49,6 +49,28 @@ const HistorialSeguimiento = ({ denunciaId }: HistorialSeguimientoProps) => {
     if (denunciaId) {
       cargarHistorial();
     }
+
+    // Suscribirse a cambios en tiempo real para actualizar el historial
+    const channel = supabase
+      .channel('historial-seguimiento')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'seguimiento_denuncias',
+          filter: `denuncia_id=eq.${denunciaId}`
+        },
+        () => {
+          console.log('Nuevo registro en historial, recargando...');
+          cargarHistorial();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [denunciaId]);
 
   const getEstadoBadgeColor = (estado: string) => {
@@ -90,33 +112,43 @@ const HistorialSeguimiento = ({ denunciaId }: HistorialSeguimientoProps) => {
         ) : (
           <div className="space-y-4">
             {historial.map((item) => (
-              <div key={item.id} className="border-l-4 border-blue-500 pl-4 py-2">
+              <div key={item.id} className="border-l-4 border-blue-500 pl-4 py-3 bg-gray-50 rounded-r-lg">
                 <div className="flex items-center gap-2 mb-2">
-                  <span className="font-semibold">{item.operacion}</span>
+                  <span className="font-semibold text-lg">{item.operacion}</span>
                   <span className="text-sm text-gray-500">
                     {format(new Date(item.fecha), 'dd/MM/yyyy HH:mm', { locale: es })}
                   </span>
                 </div>
+                
                 {item.estado_anterior && item.estado_nuevo && (
-                  <div className="flex items-center gap-2 mb-2">
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="text-sm font-medium">Estado:</span>
                     <Badge className={getEstadoBadgeColor(item.estado_anterior)}>
                       {item.estado_anterior.toUpperCase()}
                     </Badge>
-                    <span>→</span>
+                    <span className="text-gray-400">→</span>
                     <Badge className={getEstadoBadgeColor(item.estado_nuevo)}>
                       {item.estado_nuevo.toUpperCase()}
                     </Badge>
                   </div>
                 )}
+                
                 {item.acciones_realizadas && (
-                  <p className="text-sm text-gray-700 mb-1">
-                    <strong>Acciones:</strong> {item.acciones_realizadas}
-                  </p>
+                  <div className="mb-2">
+                    <span className="text-sm font-medium text-gray-700">Acciones realizadas:</span>
+                    <p className="text-sm text-gray-600 mt-1 bg-white p-2 rounded border-l-2 border-blue-200">
+                      {item.acciones_realizadas}
+                    </p>
+                  </div>
                 )}
+                
                 {item.observaciones && (
-                  <p className="text-sm text-gray-600">
-                    <strong>Observaciones:</strong> {item.observaciones}
-                  </p>
+                  <div>
+                    <span className="text-sm font-medium text-gray-700">Observaciones:</span>
+                    <p className="text-sm text-gray-600 mt-1 bg-white p-2 rounded border-l-2 border-green-200">
+                      {item.observaciones}
+                    </p>
+                  </div>
                 )}
               </div>
             ))}

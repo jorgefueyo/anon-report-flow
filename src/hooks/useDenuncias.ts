@@ -187,17 +187,19 @@ export const useDenuncias = () => {
       console.log('Actualizando estado de denuncia:', { denunciaId, nuevoEstado, observaciones });
 
       // Obtener la denuncia completa antes de actualizar
-      const { data: denunciaAnterior } = await supabase
+      const { data: denunciaAnterior, error: errorConsulta } = await supabase
         .from('denuncias')
         .select('*')
         .eq('id', denunciaId)
         .single();
 
-      if (!denunciaAnterior) {
+      if (errorConsulta || !denunciaAnterior) {
+        console.error('Error obteniendo denuncia:', errorConsulta);
         throw new Error('No se encontró la denuncia');
       }
 
-      const { error } = await supabase
+      // Actualizar la denuncia
+      const { error: errorActualizacion } = await supabase
         .from('denuncias')
         .update({ 
           estado: nuevoEstado,
@@ -206,12 +208,29 @@ export const useDenuncias = () => {
         })
         .eq('id', denunciaId);
 
-      if (error) {
-        console.error('Error actualizando estado:', error);
-        throw new Error('Error al actualizar el estado: ' + error.message);
+      if (errorActualizacion) {
+        console.error('Error actualizando estado:', errorActualizacion);
+        throw new Error('Error al actualizar el estado: ' + errorActualizacion.message);
       }
 
-      // Obtener la denuncia actualizada
+      // Crear registro en historial de seguimiento
+      const { error: errorSeguimiento } = await supabase
+        .from('seguimiento_denuncias')
+        .insert({
+          denuncia_id: denunciaId,
+          estado_anterior: denunciaAnterior.estado,
+          estado_nuevo: nuevoEstado,
+          operacion: 'Actualización de estado',
+          acciones_realizadas: `Estado cambiado de ${denunciaAnterior.estado} a ${nuevoEstado}`,
+          observaciones: observaciones || null
+        });
+
+      if (errorSeguimiento) {
+        console.error('Error creando registro de seguimiento:', errorSeguimiento);
+        // No lanzar error aquí para no bloquear la actualización principal
+      }
+
+      // Obtener la denuncia actualizada para las notificaciones
       const { data: denunciaActualizada } = await supabase
         .from('denuncias')
         .select('*')
