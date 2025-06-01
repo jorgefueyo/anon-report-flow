@@ -33,7 +33,6 @@ export const useSecureAuth = () => {
         return;
       }
 
-      // Don't try to set config for now to avoid RPC issues
       console.log('Checking auth for admin:', adminId);
 
       const { data, error } = await supabase
@@ -61,7 +60,7 @@ export const useSecureAuth = () => {
   const login = async (email: string, password: string): Promise<boolean> => {
     setLoginLoading(true);
     try {
-      // Simple password check for now
+      // Simple password check using btoa
       const hashedPassword = btoa(password);
 
       const { data, error } = await supabase
@@ -81,12 +80,8 @@ export const useSecureAuth = () => {
         return false;
       }
 
-      // Store admin ID securely in session storage
       sessionStorage.setItem('adminId', data.id);
-      
-      // Don't try to set config for now to avoid RPC issues
       console.log('Admin logged in:', data);
-
       setAdmin(data);
       
       toast({

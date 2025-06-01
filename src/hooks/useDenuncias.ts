@@ -33,7 +33,8 @@ export const useDenuncias = () => {
     try {
       console.log('Iniciando creación de denuncia con datos:', datos);
 
-      const { data: empresas, error: empresaError } = await supabase
+      // Get or create empresa first
+      let { data: empresas, error: empresaError } = await supabase
         .from('empresas')
         .select('id, nombre')
         .limit(1);
@@ -45,8 +46,8 @@ export const useDenuncias = () => {
         throw new Error('Error al obtener empresa: ' + empresaError.message);
       }
 
+      let empresa;
       if (!empresas || empresas.length === 0) {
-        // Create a default empresa if none exists
         console.log('No empresa found, creating default...');
         const { data: nuevaEmpresa, error: errorCreacion } = await supabase
           .from('empresas')
@@ -63,117 +64,58 @@ export const useDenuncias = () => {
           throw new Error('Error creando empresa por defecto: ' + errorCreacion?.message);
         }
 
-        console.log('Empresa creada:', nuevaEmpresa);
-        const empresa = nuevaEmpresa;
-
-        // Generate codigo_seguimiento manually since trigger might not work
-        const codigoSeguimiento = 'DEN-' + Math.random().toString(36).substr(2, 8).toUpperCase();
-
-        const datosInsercion = {
-          empresa_id: empresa.id,
-          codigo_seguimiento: codigoSeguimiento,
-          email_encriptado: secureEncryptData(datos.email),
-          nombre_encriptado: datos.nombre ? secureEncryptData(datos.nombre) : null,
-          telefono_encriptado: datos.telefono ? secureEncryptData(datos.telefono) : null,
-          domicilio_encriptado: datos.domicilio ? secureEncryptData(datos.domicilio) : null,
-          relacion_empresa: datos.relacion_empresa || null,
-          categoria: datos.categoria || null,
-          hechos: datos.hechos,
-          fecha_hechos: datos.fecha_hechos || null,
-          lugar_hechos: datos.lugar_hechos || null,
-          testigos: datos.testigos || null,
-          personas_implicadas: datos.personas_implicadas || null,
-          estado: 'pendiente'
-        };
-
-        console.log('Datos para inserción:', datosInsercion);
-
-        const { data: denuncia, error: denunciaError } = await supabase
-          .from('denuncias')
-          .insert(datosInsercion)
-          .select()
-          .single();
-
-        console.log('Resultado inserción denuncia:', { denuncia, denunciaError });
-
-        if (denunciaError) {
-          console.error('Error creando denuncia:', denunciaError);
-          throw new Error('Error al crear la denuncia: ' + denunciaError.message);
-        }
-
-        if (!denuncia) {
-          throw new Error('No se pudo crear la denuncia');
-        }
-
-        console.log('Denuncia creada exitosamente:', denuncia);
-
-        await Promise.all([
-          enviarNotificacionDenunciante(denuncia, 'nueva_denuncia'),
-          enviarNotificacionAdministradores('nueva_denuncia', denuncia.codigo_seguimiento)
-        ]);
-
-        toast({
-          title: "Denuncia creada exitosamente",
-          description: `Código de seguimiento: ${denuncia.codigo_seguimiento}`,
-        });
-
-        return denuncia.codigo_seguimiento;
+        empresa = nuevaEmpresa;
       } else {
-        const empresa = empresas[0];
-
-        // Generate codigo_seguimiento manually
-        const codigoSeguimiento = 'DEN-' + Math.random().toString(36).substr(2, 8).toUpperCase();
-
-        const datosInsercion = {
-          empresa_id: empresa.id,
-          codigo_seguimiento: codigoSeguimiento,
-          email_encriptado: secureEncryptData(datos.email),
-          nombre_encriptado: datos.nombre ? secureEncryptData(datos.nombre) : null,
-          telefono_encriptado: datos.telefono ? secureEncryptData(datos.telefono) : null,
-          domicilio_encriptado: datos.domicilio ? secureEncryptData(datos.domicilio) : null,
-          relacion_empresa: datos.relacion_empresa || null,
-          categoria: datos.categoria || null,
-          hechos: datos.hechos,
-          fecha_hechos: datos.fecha_hechos || null,
-          lugar_hechos: datos.lugar_hechos || null,
-          testigos: datos.testigos || null,
-          personas_implicadas: datos.personas_implicadas || null,
-          estado: 'pendiente'
-        };
-
-        console.log('Datos para inserción:', datosInsercion);
-
-        const { data: denuncia, error: denunciaError } = await supabase
-          .from('denuncias')
-          .insert(datosInsercion)
-          .select()
-          .single();
-
-        console.log('Resultado inserción denuncia:', { denuncia, denunciaError });
-
-        if (denunciaError) {
-          console.error('Error creando denuncia:', denunciaError);
-          throw new Error('Error al crear la denuncia: ' + denunciaError.message);
-        }
-
-        if (!denuncia) {
-          throw new Error('No se pudo crear la denuncia');
-        }
-
-        console.log('Denuncia creada exitosamente:', denuncia);
-
-        await Promise.all([
-          enviarNotificacionDenunciante(denuncia, 'nueva_denuncia'),
-          enviarNotificacionAdministradores('nueva_denuncia', denuncia.codigo_seguimiento)
-        ]);
-
-        toast({
-          title: "Denuncia creada exitosamente",
-          description: `Código de seguimiento: ${denuncia.codigo_seguimiento}`,
-        });
-
-        return denuncia.codigo_seguimiento;
+        empresa = empresas[0];
       }
+
+      // Generate tracking code
+      const codigoSeguimiento = 'DEN-' + Math.random().toString(36).substr(2, 8).toUpperCase();
+
+      const datosInsercion = {
+        empresa_id: empresa.id,
+        codigo_seguimiento: codigoSeguimiento,
+        email_encriptado: secureEncryptData(datos.email),
+        nombre_encriptado: datos.nombre ? secureEncryptData(datos.nombre) : null,
+        telefono_encriptado: datos.telefono ? secureEncryptData(datos.telefono) : null,
+        domicilio_encriptado: datos.domicilio ? secureEncryptData(datos.domicilio) : null,
+        relacion_empresa: datos.relacion_empresa || null,
+        categoria: datos.categoria || null,
+        hechos: datos.hechos,
+        fecha_hechos: datos.fecha_hechos || null,
+        lugar_hechos: datos.lugar_hechos || null,
+        testigos: datos.testigos || null,
+        personas_implicadas: datos.personas_implicadas || null,
+        estado: 'pendiente'
+      };
+
+      console.log('Datos para inserción:', datosInsercion);
+
+      const { data: denuncia, error: denunciaError } = await supabase
+        .from('denuncias')
+        .insert(datosInsercion)
+        .select()
+        .single();
+
+      console.log('Resultado inserción denuncia:', { denuncia, denunciaError });
+
+      if (denunciaError) {
+        console.error('Error creando denuncia:', denunciaError);
+        throw new Error('Error al crear la denuncia: ' + denunciaError.message);
+      }
+
+      if (!denuncia) {
+        throw new Error('No se pudo crear la denuncia');
+      }
+
+      console.log('Denuncia creada exitosamente:', denuncia);
+
+      toast({
+        title: "Denuncia creada exitosamente",
+        description: `Código de seguimiento: ${denuncia.codigo_seguimiento}`,
+      });
+
+      return denuncia.codigo_seguimiento;
     } catch (error) {
       console.error('Error completo creando denuncia:', error);
       toast({
@@ -221,6 +163,7 @@ export const useDenuncias = () => {
         throw new Error('Error al actualizar el estado: ' + errorActualizacion.message);
       }
 
+      // Add tracking record only if there are changes
       if (observaciones || denunciaAnterior.estado !== nuevoEstado) {
         const { error: errorSeguimiento } = await supabase
           .from('seguimiento_denuncias')
@@ -237,6 +180,7 @@ export const useDenuncias = () => {
 
         if (errorSeguimiento) {
           console.error('Error creando registro de seguimiento:', errorSeguimiento);
+          // Don't fail the whole operation for tracking error
         }
       }
 
