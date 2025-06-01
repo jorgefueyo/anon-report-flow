@@ -2,13 +2,45 @@ import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Denuncia, FormularioDenuncia, DenunciaArchivo } from '@/types/denuncia';
-import { encryptData } from '@/utils/encryption';
+import { encryptData, decryptData } from '@/utils/encryption';
 import { useEmailNotifications } from '@/hooks/useEmailNotifications';
 
 export const useDenuncias = () => {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const { sendNewDenunciaNotification, sendEstadoCambioNotification } = useEmailNotifications();
+
+  const enviarNotificacionDenunciante = async (denuncia: Denuncia, tipo: 'nueva_denuncia' | 'estado_cambio', estadoAnterior?: string) => {
+    try {
+      // Desencriptar el email del denunciante
+      const emailDenunciante = decryptData(denuncia.email_encriptado);
+      
+      // Obtener empresa
+      const { data: empresa } = await supabase
+        .from('empresas')
+        .select('nombre')
+        .eq('id', denuncia.empresa_id)
+        .single();
+
+      if (tipo === 'nueva_denuncia') {
+        await sendNewDenunciaNotification(
+          emailDenunciante,
+          denuncia.codigo_seguimiento,
+          empresa?.nombre
+        );
+      } else if (tipo === 'estado_cambio' && estadoAnterior) {
+        await sendEstadoCambioNotification(
+          emailDenunciante,
+          denuncia.codigo_seguimiento,
+          estadoAnterior,
+          denuncia.estado,
+          empresa?.nombre
+        );
+      }
+    } catch (error) {
+      console.error('Error enviando notificación al denunciante:', error);
+    }
+  };
 
   const enviarNotificacionAdministradores = async (tipo: 'nueva_denuncia' | 'estado_cambio', denunciaCode: string, estadoAnterior?: string, estadoNuevo?: string) => {
     try {
@@ -100,7 +132,7 @@ export const useDenuncias = () => {
 
       console.log('Datos para inserción:', datosInsercion);
 
-      // Crear la denuncia - removemos codigo_seguimiento del objeto
+      // Crear la denuncia
       const { data: denuncia, error: denunciaError } = await supabase
         .from('denuncias')
         .insert(datosInsercion)
@@ -120,8 +152,11 @@ export const useDenuncias = () => {
 
       console.log('Denuncia creada exitosamente:', denuncia);
 
-      // Enviar notificaciones a administradores
-      await enviarNotificacionAdministradores('nueva_denuncia', denuncia.codigo_seguimiento);
+      // Enviar notificaciones al denunciante y administradores
+      await Promise.all([
+        enviarNotificacionDenunciante(denuncia, 'nueva_denuncia'),
+        enviarNotificacionAdministradores('nueva_denuncia', denuncia.codigo_seguimiento)
+      ]);
 
       toast({
         title: "Denuncia creada exitosamente",
@@ -151,12 +186,16 @@ export const useDenuncias = () => {
     try {
       console.log('Actualizando estado de denuncia:', { denunciaId, nuevoEstado, observaciones });
 
-      // Obtener el estado anterior y código de seguimiento
+      // Obtener la denuncia completa antes de actualizar
       const { data: denunciaAnterior } = await supabase
         .from('denuncias')
-        .select('estado, codigo_seguimiento')
+        .select('*')
         .eq('id', denunciaId)
         .single();
+
+      if (!denunciaAnterior) {
+        throw new Error('No se encontró la denuncia');
+      }
 
       const { error } = await supabase
         .from('denuncias')
@@ -172,14 +211,24 @@ export const useDenuncias = () => {
         throw new Error('Error al actualizar el estado: ' + error.message);
       }
 
-      // Enviar notificaciones a administradores si cambió el estado
-      if (denunciaAnterior && denunciaAnterior.estado !== nuevoEstado) {
-        await enviarNotificacionAdministradores(
-          'estado_cambio', 
-          denunciaAnterior.codigo_seguimiento,
-          denunciaAnterior.estado,
-          nuevoEstado
-        );
+      // Obtener la denuncia actualizada
+      const { data: denunciaActualizada } = await supabase
+        .from('denuncias')
+        .select('*')
+        .eq('id', denunciaId)
+        .single();
+
+      // Enviar notificaciones si cambió el estado
+      if (denunciaAnterior.estado !== nuevoEstado && denunciaActualizada) {
+        await Promise.all([
+          enviarNotificacionDenunciante(denunciaActualizada, 'estado_cambio', denunciaAnterior.estado),
+          enviarNotificacionAdministradores(
+            'estado_cambio', 
+            denunciaAnterior.codigo_seguimiento,
+            denunciaAnterior.estado,
+            nuevoEstado
+          )
+        ]);
       }
 
       toast({
