@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -129,22 +128,62 @@ const BackofficeGestionDenuncia = () => {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div>
-          <Label>Estado</Label>
-          <Input type="text" value={denuncia.estado} disabled />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <Label>Estado</Label>
+            <Input type="text" value={denuncia.estado} disabled />
+          </div>
+          <div>
+            <Label>Fecha de creación</Label>
+            <Input type="text" value={new Date(denuncia.created_at).toLocaleDateString('es-ES')} disabled />
+          </div>
+          <div>
+            <Label>Relación con la empresa</Label>
+            <Input type="text" value={denuncia.relacion_empresa || 'No especificado'} disabled />
+          </div>
+          <div>
+            <Label>Categoría</Label>
+            <Input type="text" value={denuncia.categoria || 'No especificada'} disabled />
+          </div>
+          {denuncia.fecha_hechos && (
+            <div>
+              <Label>Fecha de los hechos</Label>
+              <Input type="text" value={new Date(denuncia.fecha_hechos).toLocaleDateString('es-ES')} disabled />
+            </div>
+          )}
+          {denuncia.lugar_hechos && (
+            <div>
+              <Label>Lugar de los hechos</Label>
+              <Input type="text" value={denuncia.lugar_hechos} disabled />
+            </div>
+          )}
         </div>
+        
         <div>
-          <Label>Relación con la empresa</Label>
-          <Input type="text" value={denuncia.relacion_empresa || 'No especificado'} disabled />
+          <Label>Descripción de los hechos</Label>
+          <Textarea value={denuncia.hechos} disabled className="min-h-32" />
         </div>
-        <div>
-          <Label>Categoría</Label>
-          <Input type="text" value={denuncia.categoria || 'No especificada'} disabled />
-        </div>
-        <div>
-          <Label>Hechos</Label>
-          <Textarea value={denuncia.hechos} disabled />
-        </div>
+
+        {denuncia.testigos && (
+          <div>
+            <Label>Testigos</Label>
+            <Textarea value={denuncia.testigos} disabled className="min-h-20" />
+          </div>
+        )}
+
+        {denuncia.personas_implicadas && (
+          <div>
+            <Label>Personas implicadas</Label>
+            <Textarea value={denuncia.personas_implicadas} disabled className="min-h-20" />
+          </div>
+        )}
+
+        {denuncia.observaciones_internas && (
+          <div>
+            <Label>Observaciones internas</Label>
+            <Textarea value={denuncia.observaciones_internas} disabled className="min-h-20" />
+          </div>
+        )}
       </CardContent>
     </Card>
   );

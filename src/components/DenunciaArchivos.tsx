@@ -39,6 +39,11 @@ const DenunciaArchivos = ({ denunciaId }: DenunciaArchivosProps) => {
 
       if (error) {
         console.error('Error cargando archivos:', error);
+        toast({
+          title: "Error",
+          description: "No se pudieron cargar los archivos",
+          variant: "destructive",
+        });
         return;
       }
 
@@ -55,6 +60,11 @@ const DenunciaArchivos = ({ denunciaId }: DenunciaArchivosProps) => {
       setArchivos(archivosMapeados);
     } catch (error) {
       console.error('Error:', error);
+      toast({
+        title: "Error",
+        description: "Error al cargar los archivos",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
@@ -110,6 +120,12 @@ const DenunciaArchivos = ({ denunciaId }: DenunciaArchivosProps) => {
 
       if (data?.signedUrl) {
         window.open(data.signedUrl, '_blank');
+      } else {
+        toast({
+          title: "Error",
+          description: "No se pudo generar la URL de previsualización",
+          variant: "destructive",
+        });
       }
     } catch (error) {
       console.error('Error previsualizando archivo:', error);

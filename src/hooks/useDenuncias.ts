@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -80,6 +81,7 @@ export const useDenuncias = () => {
         console.log('Referencia del archivo guardada en BD');
       }
 
+      console.log('Todos los archivos subidos exitosamente');
       return true;
     } catch (error) {
       console.error('Error en subirArchivos:', error);

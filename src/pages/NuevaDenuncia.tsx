@@ -54,21 +54,26 @@ const NuevaDenuncia = () => {
   });
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    console.log('Enviando formulario con valores:', values);
+    console.log('Archivos adjuntos:', archivos);
+    
     // Asegurarnos de que el email está presente ya que es requerido
     const datos: FormularioDenuncia = {
       email: values.email, // Este campo es requerido en el tipo
-      nombre: values.nombre,
-      telefono: values.telefono,
-      domicilio: values.domicilio,
-      relacion_empresa: values.relacion_empresa,
-      categoria: values.categoria,
+      nombre: values.nombre || undefined,
+      telefono: values.telefono || undefined,
+      domicilio: values.domicilio || undefined,
+      relacion_empresa: values.relacion_empresa || undefined,
+      categoria: values.categoria || undefined,
       hechos: values.hechos,
-      fecha_hechos: values.fecha_hechos,
-      lugar_hechos: values.lugar_hechos,
-      testigos: values.testigos,
-      personas_implicadas: values.personas_implicadas,
-      archivos,
+      fecha_hechos: values.fecha_hechos || undefined,
+      lugar_hechos: values.lugar_hechos || undefined,
+      testigos: values.testigos || undefined,
+      personas_implicadas: values.personas_implicadas || undefined,
+      archivos: archivos.length > 0 ? archivos : undefined,
     };
+
+    console.log('Datos finales para enviar:', datos);
 
     const codigo = await crearDenuncia(datos);
     if (codigo) {
