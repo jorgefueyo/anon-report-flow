@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -26,7 +25,7 @@ import BackofficeHeader from "@/components/BackofficeHeader";
 import EstadoBadge from "@/components/EstadoBadge";
 import DenunciasFilters from "@/components/DenunciasFilters";
 import { supabase } from "@/integrations/supabase/client";
-import { decryptData } from "@/utils/encryption";
+import { secureDecryptData } from "@/utils/secureEncryption";
 
 interface Admin {
   id: string;
@@ -61,21 +60,25 @@ const BackofficeDenuncias = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Verificar si hay admin logueado
-    const adminData = localStorage.getItem('backoffice_admin');
-    if (!adminData) {
+    // Use sessionStorage instead of localStorage for consistency with security context
+    const adminId = sessionStorage.getItem('adminId');
+    if (!adminId) {
       navigate('/backoffice/login');
       return;
     }
 
-    try {
-      const parsedAdmin = JSON.parse(adminData);
-      setAdmin(parsedAdmin);
-      cargarDenuncias();
-    } catch (error) {
-      console.error('Error parsing admin data:', error);
-      navigate('/backoffice/login');
+    // Get admin data from session
+    const adminData = localStorage.getItem('backoffice_admin');
+    if (adminData) {
+      try {
+        const parsedAdmin = JSON.parse(adminData);
+        setAdmin(parsedAdmin);
+      } catch (error) {
+        console.error('Error parsing admin data:', error);
+      }
     }
+
+    cargarDenuncias();
   }, [navigate]);
 
   const cargarDenuncias = async () => {
@@ -133,7 +136,7 @@ const BackofficeDenuncias = () => {
       if (fechaHasta) {
         const fechaDenuncia = new Date(denuncia.created_at);
         const fechaMax = new Date(fechaHasta);
-        fechaMax.setHours(23, 59, 59, 999); // Incluir todo el día
+        fechaMax.setHours(23, 59, 59, 999);
         cumpleFecha = cumpleFecha && fechaDenuncia <= fechaMax;
       }
 
@@ -188,7 +191,7 @@ const BackofficeDenuncias = () => {
 
   const getEmailDesencriptado = (emailEncriptado: string) => {
     try {
-      return decryptData(emailEncriptado);
+      return secureDecryptData(emailEncriptado);
     } catch {
       return "Email no disponible";
     }
@@ -198,7 +201,7 @@ const BackofficeDenuncias = () => {
   const mapearEstadoParaBadge = (estado: string): 'pendiente' | 'en_proceso' | 'finalizada' => {
     switch (estado) {
       case 'asignada':
-        return 'en_proceso'; // Mapeamos asignada a en_proceso para el badge
+        return 'en_proceso';
       case 'en_proceso':
         return 'en_proceso';
       case 'finalizada':
