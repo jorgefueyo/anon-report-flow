@@ -26,6 +26,7 @@ interface SeguimientoDenuncia {
   estado_nuevo: string;
   operacion: string;
   acciones_realizadas: string | null;
+  observaciones: string | null;
   created_at: string;
 }
 
@@ -66,7 +67,6 @@ const ConsultarDenuncia = () => {
         return;
       }
 
-      // Cast del estado para asegurar tipo correcto
       const denunciaTyped: Denuncia = {
         ...data,
         estado: data.estado as 'pendiente' | 'en_proceso' | 'finalizada'
@@ -77,7 +77,7 @@ const ConsultarDenuncia = () => {
       // Cargar el historial de seguimiento
       const { data: seguimientosData, error: seguimientosError } = await supabase
         .from('seguimiento_denuncias')
-        .select('id, estado_anterior, estado_nuevo, operacion, acciones_realizadas, created_at')
+        .select('id, estado_anterior, estado_nuevo, operacion, acciones_realizadas, observaciones, created_at')
         .eq('denuncia_id', data.id)
         .order('created_at', { ascending: false });
 
@@ -212,7 +212,6 @@ const ConsultarDenuncia = () => {
                   </CardContent>
                 </Card>
 
-                {/* Historial de seguimiento */}
                 <Card className="bg-gray-50">
                   <CardHeader>
                     <CardTitle className="flex items-center text-lg">
@@ -246,9 +245,18 @@ const ConsultarDenuncia = () => {
                             </div>
                             
                             {seguimiento.acciones_realizadas && (
-                              <div>
+                              <div className="mb-2">
                                 <Label className="text-xs font-semibold">Acciones realizadas:</Label>
                                 <p className="text-sm text-gray-700">{seguimiento.acciones_realizadas}</p>
+                              </div>
+                            )}
+
+                            {seguimiento.observaciones && (
+                              <div>
+                                <Label className="text-xs font-semibold">Observaciones:</Label>
+                                <p className="text-sm text-gray-700 bg-blue-50 p-2 rounded border-l-2 border-blue-200 mt-1">
+                                  {seguimiento.observaciones}
+                                </p>
                               </div>
                             )}
                           </div>

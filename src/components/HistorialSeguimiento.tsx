@@ -1,5 +1,5 @@
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
@@ -24,33 +24,32 @@ const HistorialSeguimiento = ({ denunciaId }: HistorialSeguimientoProps) => {
   const [historial, setHistorial] = useState<HistorialItem[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const cargarHistorial = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('seguimiento_denuncias')
-          .select('*')
-          .eq('denuncia_id', denunciaId)
-          .order('created_at', { ascending: false });
+  const cargarHistorial = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from('seguimiento_denuncias')
+        .select('*')
+        .eq('denuncia_id', denunciaId)
+        .order('created_at', { ascending: false });
 
-        if (error) {
-          console.error('Error cargando historial:', error);
-          return;
-        }
-
-        setHistorial(data || []);
-      } catch (error) {
+      if (error) {
         console.error('Error cargando historial:', error);
-      } finally {
-        setLoading(false);
+        return;
       }
-    };
 
+      setHistorial(data || []);
+    } catch (error) {
+      console.error('Error cargando historial:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [denunciaId]);
+
+  useEffect(() => {
     if (denunciaId) {
       cargarHistorial();
     }
 
-    // Suscribirse a cambios en tiempo real para actualizar el historial
     const channel = supabase
       .channel('historial-seguimiento')
       .on(
@@ -71,7 +70,7 @@ const HistorialSeguimiento = ({ denunciaId }: HistorialSeguimientoProps) => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [denunciaId]);
+  }, [denunciaId, cargarHistorial]);
 
   const getEstadoBadgeColor = (estado: string) => {
     switch (estado) {

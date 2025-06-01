@@ -1,5 +1,5 @@
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -21,7 +21,7 @@ const GestionarDenuncia = ({ denuncia, onDenunciaActualizada }: GestionarDenunci
 
   const handleActualizarEstado = useCallback(async () => {
     if (!observaciones.trim() && nuevoEstado === denuncia.estado) {
-      return; // No hacer nada si no hay cambios
+      return;
     }
 
     console.log('Iniciando actualización:', { denunciaId: denuncia.id, nuevoEstado, observaciones });
@@ -30,64 +30,30 @@ const GestionarDenuncia = ({ denuncia, onDenunciaActualizada }: GestionarDenunci
     
     if (exito) {
       console.log('Actualización exitosa');
-      // Actualizar la denuncia local
       const denunciaActualizada = {
         ...denuncia,
         estado: nuevoEstado,
-        observaciones_internas: denuncia.observaciones_internas || '',
+        observaciones_internas: observaciones.trim() || denuncia.observaciones_internas,
         updated_at: new Date().toISOString()
       };
       onDenunciaActualizada(denunciaActualizada);
-      
-      // Limpiar el campo de observaciones después de guardar
       setObservaciones('');
     }
   }, [denuncia, nuevoEstado, observaciones, actualizarEstadoDenuncia, onDenunciaActualizada]);
 
-  const getEstadoIcon = (estado: string) => {
-    switch (estado) {
-      case 'pendiente':
-        return <Clock className="w-4 h-4 text-yellow-600" />;
-      case 'asignada':
-        return <User className="w-4 h-4 text-blue-600" />;
-      case 'en_proceso':
-        return <AlertCircle className="w-4 h-4 text-orange-600" />;
-      case 'finalizada':
-        return <CheckCircle className="w-4 h-4 text-green-600" />;
-      default:
-        return <Clock className="w-4 h-4 text-gray-600" />;
-    }
+  const estadoConfig = useMemo(() => ({
+    pendiente: { icon: Clock, color: 'bg-yellow-100 text-yellow-800', label: 'PENDIENTE' },
+    asignada: { icon: User, color: 'bg-blue-100 text-blue-800', label: 'ASIGNADA' },
+    en_proceso: { icon: AlertCircle, color: 'bg-orange-100 text-orange-800', label: 'EN PROCESO' },
+    finalizada: { icon: CheckCircle, color: 'bg-green-100 text-green-800', label: 'FINALIZADA' }
+  }), []);
+
+  const getEstadoConfig = (estado: string) => {
+    return estadoConfig[estado as keyof typeof estadoConfig] || estadoConfig.pendiente;
   };
 
-  const getEstadoColor = (estado: string) => {
-    switch (estado) {
-      case 'pendiente':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'asignada':
-        return 'bg-blue-100 text-blue-800';
-      case 'en_proceso':
-        return 'bg-orange-100 text-orange-800';
-      case 'finalizada':
-        return 'bg-green-100 text-green-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const getEstadoLabel = (estado: string) => {
-    switch (estado) {
-      case 'pendiente':
-        return 'PENDIENTE';
-      case 'asignada':
-        return 'ASIGNADA';
-      case 'en_proceso':
-        return 'EN PROCESO';
-      case 'finalizada':
-        return 'FINALIZADA';
-      default:
-        return estado.toUpperCase();
-    }
-  };
+  const currentConfig = getEstadoConfig(denuncia.estado);
+  const IconComponent = currentConfig.icon;
 
   const isButtonDisabled = loading || (!observaciones.trim() && nuevoEstado === denuncia.estado);
 
@@ -95,15 +61,15 @@ const GestionarDenuncia = ({ denuncia, onDenunciaActualizada }: GestionarDenunci
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          {getEstadoIcon(denuncia.estado)}
+          <IconComponent className="w-4 h-4" style={{ color: currentConfig.color.includes('yellow') ? '#d97706' : currentConfig.color.includes('blue') ? '#2563eb' : currentConfig.color.includes('orange') ? '#ea580c' : '#16a34a' }} />
           Gestionar Denuncia
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div>
           <Label htmlFor="estado-actual">Estado actual</Label>
-          <div className={`inline-flex items-center px-2 py-1 rounded-full text-sm font-medium ${getEstadoColor(denuncia.estado)}`}>
-            {getEstadoLabel(denuncia.estado)}
+          <div className={`inline-flex items-center px-2 py-1 rounded-full text-sm font-medium ${currentConfig.color}`}>
+            {currentConfig.label}
           </div>
         </div>
 

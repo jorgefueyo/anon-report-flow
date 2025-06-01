@@ -12,10 +12,8 @@ export const useDenuncias = () => {
 
   const enviarNotificacionDenunciante = async (denuncia: Denuncia, tipo: 'nueva_denuncia' | 'estado_cambio', estadoAnterior?: string) => {
     try {
-      // Desencriptar el email del denunciante
       const emailDenunciante = decryptData(denuncia.email_encriptado);
       
-      // Obtener empresa
       const { data: empresa } = await supabase
         .from('empresas')
         .select('nombre')
@@ -44,7 +42,6 @@ export const useDenuncias = () => {
 
   const enviarNotificacionAdministradores = async (tipo: 'nueva_denuncia' | 'estado_cambio', denunciaCode: string, estadoAnterior?: string, estadoNuevo?: string) => {
     try {
-      // Obtener administradores activos
       const { data: administradores, error } = await supabase
         .from('administradores')
         .select('email, nombre')
@@ -55,14 +52,12 @@ export const useDenuncias = () => {
         return;
       }
 
-      // Obtener empresa
       const { data: empresa } = await supabase
         .from('empresas')
         .select('nombre')
         .limit(1)
         .single();
 
-      // Enviar notificaciones a todos los administradores
       for (const admin of administradores) {
         try {
           if (tipo === 'nueva_denuncia') {
@@ -94,7 +89,6 @@ export const useDenuncias = () => {
     try {
       console.log('Iniciando creación de denuncia con datos:', datos);
 
-      // Obtener la empresa por defecto (primera empresa)
       const { data: empresas, error: empresaError } = await supabase
         .from('empresas')
         .select('id, nombre')
@@ -113,7 +107,6 @@ export const useDenuncias = () => {
 
       const empresa = empresas[0];
 
-      // Preparar datos para inserción (sin codigo_seguimiento ya que se auto-genera)
       const datosInsercion = {
         empresa_id: empresa.id,
         email_encriptado: encryptData(datos.email),
@@ -132,7 +125,6 @@ export const useDenuncias = () => {
 
       console.log('Datos para inserción:', datosInsercion);
 
-      // Crear la denuncia (sin codigo_seguimiento que se auto-genera)
       const { data: denuncia, error: denunciaError } = await supabase
         .from('denuncias')
         .insert(datosInsercion)
@@ -152,7 +144,6 @@ export const useDenuncias = () => {
 
       console.log('Denuncia creada exitosamente:', denuncia);
 
-      // Enviar notificaciones al denunciante y administradores
       await Promise.all([
         enviarNotificacionDenunciante(denuncia, 'nueva_denuncia'),
         enviarNotificacionAdministradores('nueva_denuncia', denuncia.codigo_seguimiento)
@@ -213,32 +204,29 @@ export const useDenuncias = () => {
         throw new Error('Error al actualizar el estado: ' + errorActualizacion.message);
       }
 
-      // Crear registro en historial de seguimiento
-      const { error: errorSeguimiento } = await supabase
-        .from('seguimiento_denuncias')
-        .insert({
-          denuncia_id: denunciaId,
-          estado_anterior: denunciaAnterior.estado,
-          estado_nuevo: nuevoEstado,
-          operacion: 'Actualización de estado',
-          acciones_realizadas: `Estado cambiado de ${denunciaAnterior.estado} a ${nuevoEstado}`,
-          observaciones: observaciones || null
-        });
+      // Crear registro en historial de seguimiento SIEMPRE que hay observaciones o cambio de estado
+      if (observaciones || denunciaAnterior.estado !== nuevoEstado) {
+        const { error: errorSeguimiento } = await supabase
+          .from('seguimiento_denuncias')
+          .insert({
+            denuncia_id: denunciaId,
+            estado_anterior: denunciaAnterior.estado !== nuevoEstado ? denunciaAnterior.estado : null,
+            estado_nuevo: nuevoEstado,
+            operacion: observaciones ? 'Actualización con observaciones' : 'Actualización de estado',
+            acciones_realizadas: denunciaAnterior.estado !== nuevoEstado 
+              ? `Estado cambiado de ${denunciaAnterior.estado} a ${nuevoEstado}` 
+              : 'Observaciones añadidas',
+            observaciones: observaciones || null
+          });
 
-      if (errorSeguimiento) {
-        console.error('Error creando registro de seguimiento:', errorSeguimiento);
-        // No lanzar error aquí para no bloquear la actualización principal
+        if (errorSeguimiento) {
+          console.error('Error creando registro de seguimiento:', errorSeguimiento);
+        }
       }
 
-      // Obtener la denuncia actualizada para las notificaciones
-      const { data: denunciaActualizada } = await supabase
-        .from('denuncias')
-        .select('*')
-        .eq('id', denunciaId)
-        .single();
-
-      // Enviar notificaciones si cambió el estado
-      if (denunciaAnterior.estado !== nuevoEstado && denunciaActualizada) {
+      // Enviar notificaciones solo si cambió el estado
+      if (denunciaAnterior.estado !== nuevoEstado) {
+        const denunciaActualizada = { ...denunciaAnterior, estado: nuevoEstado };
         await Promise.all([
           enviarNotificacionDenunciante(denunciaActualizada, 'estado_cambio', denunciaAnterior.estado),
           enviarNotificacionAdministradores(
@@ -251,8 +239,8 @@ export const useDenuncias = () => {
       }
 
       toast({
-        title: "Estado actualizado",
-        description: `La denuncia ha sido actualizada a: ${nuevoEstado}`,
+        title: "Denuncia actualizada",
+        description: observaciones ? "Observaciones añadidas correctamente" : `Estado actualizado a: ${nuevoEstado}`,
       });
 
       return true;
@@ -260,7 +248,7 @@ export const useDenuncias = () => {
       console.error('Error actualizando estado:', error);
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "No se pudo actualizar el estado",
+        description: error instanceof Error ? error.message : "No se pudo actualizar la denuncia",
         variant: "destructive",
       });
       return false;
