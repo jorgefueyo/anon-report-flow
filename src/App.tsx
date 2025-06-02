@@ -23,7 +23,7 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter>
+      <BrowserRouter basename="/anon-report-flow"> {/* 👈 Añadido */}
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/nueva-denuncia" element={<NuevaDenuncia />} />
