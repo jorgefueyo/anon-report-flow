@@ -339,7 +339,6 @@ const BackofficeDenuncias = () => {
                       <TableHeader>
                         <TableRow>
                           <TableHead>Código</TableHead>
-                          <TableHead>Email</TableHead>
                           <TableHead 
                             className="cursor-pointer hover:bg-gray-50"
                             onClick={() => handleSort('categoria')}
@@ -375,9 +374,6 @@ const BackofficeDenuncias = () => {
                           <TableRow key={denuncia.id}>
                             <TableCell className="font-medium">
                               {denuncia.codigo_seguimiento}
-                            </TableCell>
-                            <TableCell>
-                              {getEmailDesencriptado(denuncia.email_encriptado)}
                             </TableCell>
                             <TableCell>
                               {denuncia.categoria || 'Sin categoría'}
